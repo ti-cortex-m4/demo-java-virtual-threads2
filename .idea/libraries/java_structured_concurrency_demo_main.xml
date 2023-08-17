@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="java-structured-concurrency-demo-main">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/svenwoltmann/java-structured-concurrency-demo-main.zip!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
