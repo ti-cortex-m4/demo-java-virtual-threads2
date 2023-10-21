@@ -1,4 +1,4 @@
-package com.jenkov.java.concurrency.virtualthreads;
+package x4;
 
 public class VirtualThreadExample {
 
