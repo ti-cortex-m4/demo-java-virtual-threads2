@@ -1,14 +1,8 @@
 package x5;
 
-import jdk.incubator.concurrent.StructuredTaskScope;
-import org.junit.jupiter.api.Test;
-
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.*;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 
 public class JEP428StructuredConcurrencyUnitTest {
 
