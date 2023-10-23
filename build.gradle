@@ -1,0 +1,17 @@
+plugins {
+	id 'java'
+}
+
+sourceCompatibility = '21'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	testImplementation('junit:junit')
+}
+
+test {
+	useJUnitPlatform()
+}
