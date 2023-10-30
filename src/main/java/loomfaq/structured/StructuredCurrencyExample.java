@@ -1,10 +1,10 @@
 package loomfaq.structured;
 
-import io.vividcode.loomfaq.Helper;
+import loomfaq.Helper;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import jdk.incubator.concurrent.StructuredTaskScope;
+
 
 public class StructuredCurrencyExample {
 

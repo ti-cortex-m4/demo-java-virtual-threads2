@@ -1,14 +1,15 @@
 package loomfaq.structured;
 
-import io.vividcode.loomfaq.Helper;
+import loomfaq.Helper;
 import java.time.Duration;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.StructuredTaskScope;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
-import jdk.incubator.concurrent.StructuredTaskScope;
+
 
 public class InvokeAll {
 

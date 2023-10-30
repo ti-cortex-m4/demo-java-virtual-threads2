@@ -1,7 +1,7 @@
 package loomfaq.virtualthread;
 
-import io.vividcode.loomfaq.CheckedRunnable;
-import io.vividcode.loomfaq.Helper;
+import loomfaq.CheckedRunnable;
+import loomfaq.Helper;
 import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;

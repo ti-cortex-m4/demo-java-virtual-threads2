@@ -2,7 +2,7 @@ package loomfaq.structured.example;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import jdk.incubator.concurrent.StructuredTaskScope;
+
 
 public class StructuredWay {
   int takeAction(String input) throws InterruptedException, ExecutionException {
