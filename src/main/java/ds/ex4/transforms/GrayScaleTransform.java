@@ -1,6 +1,6 @@
 package ds.ex4.transforms;
 
-import utils.Image;
+import ds.ex4.utils.Image;
 
 /**
  * A Transform subclass that converts a downloaded image to grayscale.

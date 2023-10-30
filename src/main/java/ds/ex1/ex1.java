@@ -1,8 +1,8 @@
 package ds.ex1;
 
-import utils.MathUtils;
-import utils.Options;
-import utils.RandomUtils;
+import ds.ex1.utils.MathUtils;
+import ds.ex1.utils.Options;
+import ds.ex1.utils.RandomUtils;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import java.util.stream.IntStream;
 
-import static utils.ExceptionUtils.rethrowConsumer;
+import static ds.ex1.utils.ExceptionUtils.rethrowConsumer;
 
 /**
  * This example demonstrates how to create, start, and use virtual and

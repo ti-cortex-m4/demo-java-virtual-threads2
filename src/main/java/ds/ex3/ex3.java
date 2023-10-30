@@ -1,9 +1,9 @@
 package ds.ex3;
 
 
-import utils.BigFraction;
-import utils.BigFractionUtils;
-import utils.Options;
+import ds.ex3.utils.BigFraction;
+import ds.ex3.utils.BigFractionUtils;
+import ds.ex3.utils.Options;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,9 +12,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.stream.Stream;
 
-import static utils.BigFractionUtils.makeBigFraction;
-import static utils.BigFractionUtils.sBigReducedFraction;
-import static utils.RandomUtils.generateRandomBigFractions;
+import static ds.ex3.utils.BigFractionUtils.makeBigFraction;
+import static ds.ex3.utils.BigFractionUtils.sBigReducedFraction;
+import static ds.ex3.utils.RandomUtils.generateRandomBigFractions;
 
 /**
  * This example demonstrates Java 19 Java structured concurrency

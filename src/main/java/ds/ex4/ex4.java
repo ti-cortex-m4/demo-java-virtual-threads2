@@ -1,8 +1,8 @@
 package ds.ex4;
 
-import common.Options;
-import tests.*;
-import utils.*;
+import ds.ex4.common.Options;
+import ds.ex4.tests.*;
+import ds.ex4.utils.*;
 
 import java.util.concurrent.*;
 import java.util.function.Consumer;

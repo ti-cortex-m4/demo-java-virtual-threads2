@@ -1,6 +1,6 @@
 package ds.ex6.common;
 
-import utils.BigFraction;
+import ds.ex6.utils.BigFraction;
 
 /**
  * This class implements the Singleton pattern to handle

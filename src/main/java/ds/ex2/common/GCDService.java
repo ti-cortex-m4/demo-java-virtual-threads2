@@ -1,6 +1,6 @@
 package ds.ex2.common;
 
-import utils.MathUtils;
+import ds.ex2.utils.MathUtils;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;

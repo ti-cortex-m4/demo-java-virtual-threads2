@@ -1,14 +1,14 @@
 package ds.ex5;
 
 
-import utils.ShutdownOnNonNullSuccess;
+import ds.ex5.utils.ShutdownOnNonNullSuccess;
 
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 
-import static utils.PrimeUtils.isPrime;
+import static ds.ex5.utils.PrimeUtils.isPrime;
 
 /**
  * This example demonstrates how to use {@link StructuredTaskScope.ShutdownOnSuccess}, as
