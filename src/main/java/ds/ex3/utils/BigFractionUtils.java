@@ -6,8 +6,9 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
+import java.util.concurrent.StructuredTaskScope;
 
-import static jdk.incubator.concurrent.StructuredTaskScope.*;
+//import static jdk.incubator.concurrent.StructuredTaskScope.*;
 
 /**
  * This Java utility class contains static methods and fields useful
@@ -88,7 +89,7 @@ public final class BigFractionUtils {
      * parameter.
      */
     public static void sortAndPrintList(List<Future<BigFraction>> list) {
-        try (var scope = new ShutdownOnSuccess<List<BigFraction>>()) {
+        try (var scope = new StructuredTaskScope.ShutdownOnSuccess<List<BigFraction>>()) {
             // This implementation uses quick sort to order the list.
             scope
                 // Perform quick sort asynchronously.

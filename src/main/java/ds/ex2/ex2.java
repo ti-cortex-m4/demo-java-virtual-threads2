@@ -1,9 +1,9 @@
 package ds.ex2;
 
-import common.GCDResult;
-import common.Options;
-import common.PrimeResult;
-import utils.*;
+import ds.ex2.common.GCDResult;
+import ds.ex2.common.Options;
+import ds.ex2.common.PrimeResult;
+import ds.ex2.utils.*;
 
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -11,8 +11,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.StreamSupport;
 
-import static common.GCDService.computeGCDs;
-import static common.PrimalityService.checkPrimalities;
+import static ds.ex2.common.GCDService.computeGCDs;
+import static ds.ex2.common.PrimalityService.checkPrimalities;
 
 /**
  * This example demonstrates Java structured concurrency features,
