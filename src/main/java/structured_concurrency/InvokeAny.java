@@ -1,35 +1,34 @@
-package loomfaq.structured_concurrency;
+package structured_concurrency;
 
 import java.time.Duration;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-public class InvokeAll {
+
+public class InvokeAny {
 
   public static void main(String[] args) throws Exception {
-    System.out.println(new InvokeAll().invokeAll());
+    System.out.println(new InvokeAny().invokeAny());
   }
 
-  public long invokeAll() throws InterruptedException, ExecutionException {
-    try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+  public long invokeAny() throws InterruptedException {
+    try (var scope = new StructuredTaskScope.ShutdownOnSuccess<>()) {
       var futures = subTasks().map(scope::fork).toList();
       scope.join();
-      scope.throwIfFailed();
-      return futures.stream().map(StructuredTaskScope.Subtask::get).reduce(0, Integer::sum);
+      return 1;//futures.stream().filter(f -> !f.isCancelled()).count();
     }
   }
 
   private Stream<Callable<Integer>> subTasks() {
-    return IntStream.range(0, 10_000)
+    return IntStream.range(0, 1000)
         .mapToObj(
             i ->
                 () -> {
                   try {
-                    Thread.sleep(Duration.ofSeconds(ThreadLocalRandom.current().nextLong(3)));
+                    Thread.sleep(Duration.ofSeconds(1 + ThreadLocalRandom.current().nextLong(5)));
                   } catch (InterruptedException e) {
                     // ignore
                   }

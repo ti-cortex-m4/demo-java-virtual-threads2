@@ -1,14 +1,14 @@
-package loomfaq.structured_concurrency;
+package structured_concurrency;
 
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.StructuredTaskScope;
 
 
-public class StructuredCurrencyExample {
+public class StructuredConcurrencyExample {
 
   public static void main(String[] args) throws Exception {
-    System.out.println( new StructuredCurrencyExample().calculate());
+    System.out.println( new StructuredConcurrencyExample().calculate());
   }
 
   public int calculate() throws InterruptedException, ExecutionException {

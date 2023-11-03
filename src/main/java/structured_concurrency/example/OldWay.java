@@ -1,4 +1,4 @@
-package loomfaq.structured_concurrency.example;
+package structured_concurrency.example;
 
 public class OldWay {
   int takeAction(String input) {

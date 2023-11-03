@@ -1,4 +1,4 @@
-package loomfaq.structured_concurrency.example;
+package structured_concurrency.example;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.StructuredTaskScope;
