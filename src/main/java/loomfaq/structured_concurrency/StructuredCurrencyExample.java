@@ -1,35 +1,33 @@
-package loomfaq.structured;
+package loomfaq.structured_concurrency;
 
-import loomfaq.Helper;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.StructuredTaskScope;
 
 
 public class StructuredCurrencyExample {
 
   public static void main(String[] args) throws Exception {
-    System.out.println(Helper.timed(() -> new StructuredCurrencyExample().calculate()));
+    System.out.println( new StructuredCurrencyExample().calculate());
   }
 
   public int calculate() throws InterruptedException, ExecutionException {
     try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-      Future<Integer> v1 = scope.fork(this::op1);
+      StructuredTaskScope.Subtask<Integer> v1 = scope.fork(this::op1);
       int v2 = calculateInner();
       scope.join();
       scope.throwIfFailed();
-      return v1.resultNow() * v2;
+      return v1.get() * v2;
     }
   }
 
   private int calculateInner() throws InterruptedException, ExecutionException {
     try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-      Future<Integer> v21 = scope.fork(this::op21);
-      Future<Integer> v22 = scope.fork(this::op22);
+      StructuredTaskScope.Subtask<Integer> v21 = scope.fork(this::op21);
+      StructuredTaskScope.Subtask<Integer> v22 = scope.fork(this::op22);
       scope.join();
       scope.throwIfFailed();
-      return v21.resultNow() + v22.resultNow();
+      return v21.get() + v22.get();
     }
   }
 

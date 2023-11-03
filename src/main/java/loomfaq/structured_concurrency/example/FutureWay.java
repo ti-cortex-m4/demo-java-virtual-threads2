@@ -1,4 +1,4 @@
-package loomfaq.structured.example;
+package loomfaq.structured_concurrency.example;
 
 import java.util.concurrent.CompletableFuture;
 
