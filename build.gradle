@@ -10,7 +10,7 @@ repositories {
 }
 
 dependencies {
-	testImplementation('junit:junit')
+	testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.0'
 }
 
 test {
