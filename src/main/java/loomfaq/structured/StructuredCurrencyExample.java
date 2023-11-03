@@ -4,6 +4,7 @@ import loomfaq.Helper;
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.StructuredTaskScope;
 
 
 public class StructuredCurrencyExample {

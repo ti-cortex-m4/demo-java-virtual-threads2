@@ -1,4 +1,4 @@
-package loomfaq.virtualthread;
+package virtual_threads;
 
 import java.time.Duration;
 import java.util.concurrent.Executors;

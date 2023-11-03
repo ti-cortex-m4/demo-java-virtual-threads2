@@ -1,4 +1,4 @@
-package x4;
+package virtual_threads;
 
 public class ThreadOfVirtual {
 
