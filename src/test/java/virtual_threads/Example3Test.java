@@ -16,11 +16,11 @@ public class Example3Test {
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t,e)            );
         Thread thread = builder.start(() -> System.out.println("run"));
+        //builder.unstarted(() -> System.out.println("dont run yet"));
 
         assertEquals("1",thread.getThreadGroup().getName());
         assertTrue(thread.isDaemon());
         assertEquals(1,thread.getPriority());
-        //builder.unstarted(() -> System.out.println("dont run yet"));
 
         thread.join();
     }
