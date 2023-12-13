@@ -2,8 +2,9 @@ plugins {
 	id 'java'
 }
 
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+java {
+	sourceCompatibility = '21'
+}
 
 repositories {
 	mavenCentral()
@@ -16,3 +17,7 @@ dependencies {
 test {
 	useJUnitPlatform()
 }
+
+//tasks.named('test') {
+//	useJUnitPlatform()
+//}
