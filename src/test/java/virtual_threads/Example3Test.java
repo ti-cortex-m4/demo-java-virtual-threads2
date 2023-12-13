@@ -18,9 +18,9 @@ public class Example3Test {
         Thread thread = builder.start(() -> System.out.println("run"));
         //builder.unstarted(() -> System.out.println("dont run yet"));
 
-        assertEquals("1",thread.getThreadGroup().getName());
+        assertEquals("VirtualThreads",thread.getThreadGroup().getName());
         assertTrue(thread.isDaemon());
-        assertEquals(1,thread.getPriority());
+        assertEquals(5,thread.getPriority());
 
         thread.join();
     }
