@@ -24,9 +24,6 @@ public class Rule1WriteBlockingSynchronousCodeTest {
         }
     }
 
-    private void process(Info info) {
-    }
-
     @Test
     public void doNotTest() throws InterruptedException, ExecutionException {
         Info info = new Info();
@@ -58,6 +55,9 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     private CompletableFuture<byte[]> getBodyAsync(String url, HttpResponse.BodyHandler<byte[]> response) {
         return CompletableFuture.supplyAsync(() -> new byte[]{});
     }
+
+    private void process(Info info) {
+    }
 }
 
 class Info {
@@ -73,6 +73,7 @@ class Info {
         return " ";
     }
 
-    public void setImageData(byte[] data) {
+    public Info setImageData(byte[] data) {
+        return this;
     }
 }
