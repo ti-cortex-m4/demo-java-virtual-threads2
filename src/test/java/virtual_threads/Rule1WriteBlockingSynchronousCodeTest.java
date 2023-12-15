@@ -48,7 +48,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     }
 
     private byte[] getBody(String url, HttpResponse.BodyHandler<byte[]> response) {
-        return new byte[];
+        return new byte[]{};
     }
 
     private CompletableFuture<String> getBodyAsync1(String url, HttpResponse.BodyHandler<String> response) {
@@ -56,7 +56,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     }
 
     private CompletableFuture<byte[]> getBodyAsync(String url, HttpResponse.BodyHandler<byte[]> response) {
-        return CompletableFuture.supplyAsync(() -> new byte[]);
+        return CompletableFuture.supplyAsync(() -> new byte[]{});
     }
 }
 
