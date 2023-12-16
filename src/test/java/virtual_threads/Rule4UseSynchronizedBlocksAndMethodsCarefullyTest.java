@@ -18,6 +18,8 @@ public class Rule4UseSynchronizedBlocksAndMethodsCarefullyTest {
     public void doNotTest() throws InterruptedException, ExecutionException {
     }
 
+
+
     public synchronized String accessResource1() {
         return access();
     }
@@ -36,4 +38,18 @@ public class Rule4UseSynchronizedBlocksAndMethodsCarefullyTest {
     private String access () {
         return "";
     }
+
+
+/*
+    synchronized(lockObj) {
+        frequentIO();
+    }
+
+    lock.lock();
+    try {
+        frequentIO();
+    } finally {
+        lock.unlock();
+    }
+*/
 }
