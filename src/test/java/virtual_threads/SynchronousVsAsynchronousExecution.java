@@ -4,6 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.Time;
+import java.time.LocalTime;
+import java.util.Date;
+import java.util.Timer;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -18,12 +22,13 @@ public class SynchronousVsAsynchronousExecution {
     @Test
     public void testSynchronous() {
         logger.info("this task started");
+        Date start = new Date();
 
         int netAmountInUsd = getPriceInEur() * getExchangeRateEurToUsd(); // blocking
         float tax = getTax(netAmountInUsd); // blocking
         float grossAmountInUsd = netAmountInUsd * (1 + tax);
 
-        logger.info("this task finished: {}", grossAmountInUsd);
+        logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime()-start.getTime()));
 
         logger.info("another task started");
     }
@@ -62,6 +67,8 @@ public class SynchronousVsAsynchronousExecution {
 
     @Test
     public void testAsynchronousWithCompletableFuture() throws InterruptedException {
+        Date start = new Date();
+
         CompletableFuture<Integer> priceInEur = CompletableFuture.supplyAsync(this::getPriceInEur);
         CompletableFuture<Integer> exchangeRateEurToUsd = CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd);
 
@@ -74,7 +81,7 @@ public class SynchronousVsAsynchronousExecution {
                 .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount))))
                 .whenComplete((grossAmountInUsd, throwable) -> {
                     if (throwable == null) {
-                        logger.info("this task finished: {}", grossAmountInUsd);
+                        logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime()-start.getTime()));
                     } else {
                         logger.warn("this task failed: {}", throwable.getMessage());
                     }
@@ -82,6 +89,25 @@ public class SynchronousVsAsynchronousExecution {
 
         logger.info("another task started");
         Thread.sleep(10000);
+    }
+
+    @Test
+    public void testSynchronousVirtualThreads() throws InterruptedException {
+        logger.info("this task started");
+        Date start = new Date();
+
+        var thread = Thread.ofVirtual().start(() ->
+            {
+                int netAmountInUsd = getPriceInEur() * getExchangeRateEurToUsd(); // blocking
+                float tax = getTax(netAmountInUsd); // blocking
+                float grossAmountInUsd = netAmountInUsd * (1 + tax);
+
+                logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime()-start.getTime()));
+            }
+        );
+        thread.join();
+
+        logger.info("this task finished: in {}", (new Date().getTime()-start.getTime()));
     }
 
     private int getPriceInEur() {
