@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.junit.jupiter.api.Test;
 
 import java.net.http.HttpResponse;
+import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
@@ -19,12 +20,16 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     @Test
     public void doTest() throws InterruptedException, ExecutionException {
         try {
+            long start = new Date().getTime();
+
             Info info = new Info();
             String page = getBody1(info.getUrl(), HttpResponse.BodyHandlers.ofString());
             String imageUrl = info.findImage(page);
             String data = getBody(imageUrl, HttpResponse.BodyHandlers.ofByteArray());
             info.setImageData(data);
             process(info);
+
+            logger.info("finished in {}", (new Date().getTime()-start));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -33,7 +38,10 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     @Test
     public void doNotTest() throws InterruptedException, ExecutionException {
         Info info = new Info();
-        ExecutorService executor = Executors.newCachedThreadPool(Thread.ofVirtual().factory());
+        ExecutorService executor = Executors.newCachedThreadPool();
+
+        long start = new Date().getTime();
+
         CompletableFuture.supplyAsync(info::getUrl, executor)
             .thenCompose(url -> getBodyAsync1(url, HttpResponse.BodyHandlers.ofString()))
             .thenApply(info::findImage)
@@ -45,29 +53,31 @@ public class Rule1WriteBlockingSynchronousCodeTest {
                 return null;
             })
             .join();
+
+        logger.info("finished in {}", (new Date().getTime()-start));
     }
 
     private String getBody1(String url, HttpResponse.BodyHandler<String> response) {
         logger.info("receive1 " + url);
-        delay();
+        delay(2);
         return "step1";
     }
 
     private String getBody(String url, HttpResponse.BodyHandler<byte[]> response) {
         logger.info("receive3 " + url);
-        delay();
+        delay(3);
         return "step3";
     }
 
     private CompletableFuture<String> getBodyAsync1(String url, HttpResponse.BodyHandler<String> response) {
         logger.info("receive1 " + url);
-        delay();
+        delay(2);
         return CompletableFuture.supplyAsync(() -> "step1");
     }
 
     private CompletableFuture<String> getBodyAsync(String url, HttpResponse.BodyHandler<byte[]> response) {
         logger.info("receive3 " + url);
-        delay();
+        delay(3);
         return CompletableFuture.supplyAsync(() -> "step3");
     }
 
@@ -77,6 +87,14 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     private void delay() {
         try {
            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void delay(int i) {
+        try {
+            Thread.sleep(i*1000);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

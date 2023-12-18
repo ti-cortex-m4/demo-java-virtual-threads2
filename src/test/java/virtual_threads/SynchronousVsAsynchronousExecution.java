@@ -111,15 +111,15 @@ public class SynchronousVsAsynchronousExecution {
     }
 
     private int getPriceInEur() {
-        return sleepAndGet(2);
+        return sleepAndGet(2, 100);
     }
 
     private int getExchangeRateEurToUsd() {
-        return sleepAndGet(4);
+        return sleepAndGet(3, 2);
     }
 
     private float getTax(int amount) {
-        return sleepAndGet(50) / 100f;
+        return sleepAndGet(5, 50) / 100f;
     }
 
 
@@ -138,7 +138,7 @@ public class SynchronousVsAsynchronousExecution {
         return message;
     }
 
-    protected static <T> T sleepAndGet(T message) {
-        return sleepAndGet(1, message);
-    }
+//    protected static <T> T sleepAndGet(T message) {
+//        return sleepAndGet(1, message);
+//    }
 }
