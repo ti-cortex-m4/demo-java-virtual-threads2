@@ -21,7 +21,7 @@ public class Example3ThreadBuildersTest {
             .name("platform thread")
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
-        Thread thread = builder.start(() -> { sleep(1); System.out.println("run!"); });
+        Thread thread = builder.unstarted(() -> System.out.println("run"));
 
         assertEquals("platform thread", thread.getName());
         assertEquals("main", thread.getThreadGroup().getName());
@@ -37,7 +37,7 @@ public class Example3ThreadBuildersTest {
             .name("virtual thread")
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
-        Thread thread = builder.start(() -> { sleep(1); System.out.println("run!"); });
+        Thread thread = builder.unstarted(() -> System.out.println("run"));
 
         assertEquals("virtual thread", thread.getName());
         assertEquals("VirtualThreads", thread.getThreadGroup().getName());
