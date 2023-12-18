@@ -14,13 +14,28 @@ public class Example3Test {
         Thread.Builder builder = Thread.ofVirtual()
             .name("MyThread")
             .inheritInheritableThreadLocals(false)
-            .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t,e)            );
+            .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
         Thread thread = builder.start(() -> System.out.println("run"));
-        //builder.unstarted(() -> System.out.println("dont run yet"));
 
-        assertEquals("VirtualThreads",thread.getThreadGroup().getName());
+        assertEquals("VirtualThreads", thread.getThreadGroup().getName());
         assertTrue(thread.isDaemon());
-        assertEquals(5,thread.getPriority());
+        assertEquals(5, thread.getPriority());
+
+        thread.join();
+    }
+
+    @Test
+    public void builder2Test() throws InterruptedException, ExecutionException {
+        Thread.Builder builder = Thread.ofVirtual()
+            .name("MyThread")
+            .inheritInheritableThreadLocals(false)
+            .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
+        Thread thread = builder.unstarted(() -> System.out.println("run"));
+        thread.start();
+
+        assertEquals("VirtualThreads", thread.getThreadGroup().getName());
+        assertTrue(thread.isDaemon());
+        assertEquals(5, thread.getPriority());
 
         thread.join();
     }
