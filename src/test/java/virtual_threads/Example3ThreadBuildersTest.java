@@ -27,8 +27,6 @@ public class Example3ThreadBuildersTest {
         assertEquals("main", thread.getThreadGroup().getName());
         assertFalse(thread.isDaemon());
         assertEquals(10, thread.getPriority());
-
-        thread.join();
     }
 
     @Test
@@ -43,15 +41,5 @@ public class Example3ThreadBuildersTest {
         assertEquals("VirtualThreads", thread.getThreadGroup().getName());
         assertTrue(thread.isDaemon());
         assertEquals(5, thread.getPriority());
-
-        thread.join();
-    }
-
-    private void sleep(int seconds) {
-        try {
-            TimeUnit.SECONDS.sleep(seconds);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
     }
 }

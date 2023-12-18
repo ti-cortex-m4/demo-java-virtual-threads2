@@ -12,10 +12,7 @@ public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
     @Test
     public void createStartedThreadTest() throws InterruptedException, ExecutionException {
         Thread.Builder builder = Thread.ofVirtual();
-        Thread thread = builder.start(() -> {
-            sleep(1);
-            System.out.println("run!");
-        });
+        Thread thread = builder.start(() -> { sleep(100); System.out.println("run"); });
         assertEquals(Thread.State.RUNNABLE, thread.getState());
         thread.join();
     }
@@ -23,18 +20,16 @@ public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
     @Test
     public void createUnstartedThreadTest() throws InterruptedException, ExecutionException {
         Thread.Builder builder = Thread.ofVirtual();
-        Thread thread = builder.unstarted(() -> {
-            sleep(1);
-            System.out.println("run!");
-        });
+        Thread thread = builder.start(() -> { sleep(100); System.out.println("run"); });
         assertEquals(Thread.State.NEW, thread.getState());
         thread.start();
+        assertEquals(Thread.State.RUNNABLE, thread.getState());
         thread.join();
     }
 
-    private void sleep(int seconds) {
+    private void sleep(int milliseconds) {
         try {
-            TimeUnit.SECONDS.sleep(seconds);
+            TimeUnit.MILLISECONDS.sleep(milliseconds);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
