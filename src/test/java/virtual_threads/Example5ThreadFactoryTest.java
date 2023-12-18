@@ -13,12 +13,12 @@ public class Example5ThreadFactoryTest {
 
     @Test
     public void virtualThreadFactoryTest() throws InterruptedException, ExecutionException {
-        Thread.Builder builder = Thread.ofVirtual();
+        Thread.Builder builder = Thread.ofVirtual()
+            .name("virtual thread");
         ThreadFactory threadFactory = builder.factory();
         Thread thread = threadFactory.newThread(() -> System.out.println("run"));
 
-        assertEquals("VirtualThreads", thread.getThreadGroup().getName());
-        assertTrue(thread.isDaemon());
-        assertEquals(5, thread.getPriority());
+        assertEquals("virtual thread", thread.getName());
+        assertEquals(Thread.State.NEW, thread.getState());
     }
 }
