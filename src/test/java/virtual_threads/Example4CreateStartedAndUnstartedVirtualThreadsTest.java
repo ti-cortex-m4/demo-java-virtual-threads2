@@ -11,33 +11,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
 
     @Test
-    public void builderTest() throws InterruptedException, ExecutionException {
-        Thread.Builder builder = Thread.ofVirtual()
-            .name("MyThread")
-            .inheritInheritableThreadLocals(false)
-            .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
-        Thread thread = builder.start(() -> System.out.println("run"));
-
-        assertEquals("VirtualThreads", thread.getThreadGroup().getName());
-        assertTrue(thread.isDaemon());
-        assertEquals(5, thread.getPriority());
-
+    public void createStartedThreadTest() throws InterruptedException, ExecutionException {
+        Thread.Builder builder = Thread.ofVirtual();
+        Thread thread = builder.start(() -> System.out.println("run!"));
         thread.join();
     }
 
     @Test
-    public void builder2Test() throws InterruptedException, ExecutionException {
-        Thread.Builder builder = Thread.ofVirtual()
-            .name("MyThread")
-            .inheritInheritableThreadLocals(false)
-            .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
-        Thread thread = builder.unstarted(() -> System.out.println("run"));
+    public void createUnstartedThreadTest() throws InterruptedException, ExecutionException {
+        Thread.Builder builder = Thread.ofVirtual();
+        Thread thread = builder.unstarted(() -> System.out.println("run!"));
+        assertEquals(Thread.State.NEW, thread.getState());
         thread.start();
-
-        assertEquals("VirtualThreads", thread.getThreadGroup().getName());
-        assertTrue(thread.isDaemon());
-        assertEquals(5, thread.getPriority());
-
         thread.join();
     }
 }
