@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class Example3Test {
+public class Example3ThreadBuildersTest {
 
     @Test
     public void platformThreadBuilderTest() throws InterruptedException, ExecutionException {
@@ -17,12 +17,13 @@ public class Example3Test {
             .daemon(false)
             .priority(10)
             .stackSize(1024)
-            .name("MyThread")
+            .name("platform thread")
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
         Thread thread = builder.start(() -> System.out.println("run"));
 
         assertEquals("main", thread.getThreadGroup().getName());
+        assertEquals("platform thread", thread.getName());
         assertFalse(thread.isDaemon());
         assertEquals(10, thread.getPriority());
 
@@ -32,12 +33,13 @@ public class Example3Test {
     @Test
     public void virtualThreadBuilderTest() throws InterruptedException, ExecutionException {
         Thread.Builder builder = Thread.ofVirtual()
-            .name("MyThread")
+            .name("virtual thread")
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
         Thread thread = builder.start(() -> System.out.println("run"));
 
         assertEquals("VirtualThreads", thread.getThreadGroup().getName());
+        assertEquals("virtual thread", thread.getName());
         assertTrue(thread.isDaemon());
         assertEquals(5, thread.getPriority());
 
