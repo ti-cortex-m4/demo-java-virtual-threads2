@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class Example6ExecutorTest {
 
     @Test
-    public void virtualThreadFactoryTest() throws InterruptedException, ExecutionException {
+    public void virtualThreadPerTaskExecutorTest() throws InterruptedException, ExecutionException {
         try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             Future<?> future = executorService.submit(() -> System.out.println("run"));
             future.get();
