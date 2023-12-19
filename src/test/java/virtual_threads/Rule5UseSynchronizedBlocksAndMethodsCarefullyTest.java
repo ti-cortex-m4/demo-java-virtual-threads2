@@ -19,7 +19,9 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
     private final Object lockObject = new Object();
 
     public synchronized String accessResource1() {
-        return access();
+        synchronized(lockObject) {
+            access();
+        }
     }
 
 
