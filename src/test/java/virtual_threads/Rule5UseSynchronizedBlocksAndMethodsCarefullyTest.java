@@ -18,26 +18,25 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
 
     private final Object lockObject = new Object();
 
-    public synchronized String accessResource1() {
+    public void accessResource1() {
         synchronized(lockObject) {
-            access();
+            exclusiveResource();
         }
     }
 
 
     private final ReentrantLock reentrantLock = new ReentrantLock();
 
-    public String accessResource2() {
+    public void accessResource2() {
         reentrantLock.lock();
         try {
-            return access();
+            exclusiveResource();
         } finally {
             reentrantLock.unlock();
         }
     }
 
-    private String access () {
-        return "";
+    private void exclusiveResource() {
     }
 
 
