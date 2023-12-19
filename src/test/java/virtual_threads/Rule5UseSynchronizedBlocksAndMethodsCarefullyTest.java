@@ -16,19 +16,21 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
     }
 
 
+    private final Object lockObject = new Object();
 
     public synchronized String accessResource1() {
         return access();
     }
 
-    private static final ReentrantLock LOCK = new ReentrantLock();
+
+    private final ReentrantLock reentrantLock = new ReentrantLock();
 
     public String accessResource2() {
-        LOCK.lock();
+        reentrantLock.lock();
         try {
             return access();
         } finally {
-            LOCK.unlock();
+            reentrantLock.unlock();
         }
     }
 
