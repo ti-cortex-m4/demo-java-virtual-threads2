@@ -38,17 +38,32 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         assertEquals("one", CONTEXT.get());
     }
 
-    private static final ScopedValue<String> NAME = ScopedValue.newInstance();
+    private static final ScopedValue<String> CONTEXT2 = ScopedValue.newInstance();
 
     @Test
     public void scopedValuesTest() {
-//        System.out.println(NAME.get());
-//        ScopedValue.where(NAME, "one");
-//        System.out.println(NAME.get());
+        assertNull(CONTEXT2.get());
 
-        //create
-        //modify in method - do not change
-        //delete ???
-        //inherit in child thread ???
+        CONTEXT2.set("zero");
+        assertEquals("zero", CONTEXT2.get()); // unconstrained mutability
+
+        doSomething2();
+        assertEquals("one", CONTEXT2.get()); // unbounded lifetime
+
+        Thread childThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                assertEquals("one", CONTEXT2.get()); // expensive inheritance
+            }
+        });
+        childThread.join();
+
+        CONTEXT2.remove();
+        assertNull(CONTEXT2.get());
+    }
+
+    private void doSomething2() {
+        CONTEXT2.set("one");
+        assertEquals("one", CONTEXT2.get());
     }
 }
