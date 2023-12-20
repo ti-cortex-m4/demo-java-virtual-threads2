@@ -1,127 +1,109 @@
 package virtual_threads;
 
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.junit.jupiter.api.Test;
-
-import java.net.http.HttpResponse;
-import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class Rule1WriteBlockingSynchronousCodeTest {
 
-    protected static final Logger logger = LoggerFactory.getLogger(Rule1WriteBlockingSynchronousCodeTest.class);
-    
+    private static final Logger logger = LoggerFactory.getLogger(Rule1WriteBlockingSynchronousCodeTest.class);
+
     @Test
-    public void doTest() {
-        try {
-            long start = new Date().getTime();
+    public void blockingSynchronousCodeTest() throws ExecutionException, InterruptedException {
+        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+            long startMillis = System.currentTimeMillis();
 
-            Info info = new Info();
-            String page = getBody1(info.getUrl(), HttpResponse.BodyHandlers.ofString());
-            String imageUrl = info.findImage(page);
-            String data = getBody(imageUrl, HttpResponse.BodyHandlers.ofByteArray());
-            info.setImageData(data);
-            process(info);
+            Future<Float> future = executorService.submit(() -> { // non-blocking
+                int priceInEur = getPriceInEur(); // blocking
+                float netAmountInUsd = priceInEur * getExchangeRateEurToUsd(); // blocking
+                float tax = getTax(netAmountInUsd); // blocking
+                return netAmountInUsd * (1 + tax);
+            });
 
-            logger.info("finished in {}", (new Date().getTime()-start));
-        } catch (Exception e) {
-            e.printStackTrace();
+            float grossAmountInUsd = future.get(); // blocking, ~10000 millis
+            assertEquals(165, grossAmountInUsd);
+
+            long durationMillis = System.currentTimeMillis() - startMillis;
+            logger.info("finished in {} millis", durationMillis);
+            assertEquals(durationMillis, 10000, 100);
         }
     }
 
     @Test
-    public void doNotTest() {
-        Info info = new Info();
-        ExecutorService executor = Executors.newCachedThreadPool();
+    public void blockingAsynchronousCodeTest() throws InterruptedException, ExecutionException {
+        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+            long startMillis = System.currentTimeMillis();
 
-        long start = new Date().getTime();
+            Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); // non-blocking
+            Future<Float> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); // non-blocking
+            float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // blocking
 
-        CompletableFuture.supplyAsync(info::getUrl, executor)
-            .thenCompose(url -> getBodyAsync1(url, HttpResponse.BodyHandlers.ofString()))
-            .thenApply(info::findImage)
-            .thenCompose(url -> getBodyAsync(url, HttpResponse.BodyHandlers.ofByteArray()))
-            .thenApply(info::setImageData)
-            .thenAccept(this::process)
-            .exceptionally(t -> {
-                t.printStackTrace();
-                return null;
+            Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); // non-blocking
+            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking, ~8000 millis
+
+            assertEquals(165, grossAmountInUsd);
+
+            long durationMillis = System.currentTimeMillis() - startMillis;
+            logger.info("finished in {} millis", durationMillis);
+            assertEquals(durationMillis, 8000, 100);
+        }
+    }
+
+    @Test
+    public void nonBlockingAsynchronousCodeTest() throws InterruptedException, ExecutionException {
+        long startMillis = System.currentTimeMillis();
+
+        CompletableFuture.supplyAsync(this::getPriceInEur) // non-blocking
+            .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) // non-blocking
+            .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) // non-blocking
+            .whenComplete((grossAmountInUsd, throwable) -> { // non-blocking
+                if (throwable == null) {
+                    assertEquals(165, grossAmountInUsd);
+                } else {
+                    fail(throwable);
+                }
             })
-            .join();
+            .get(); // blocking, ~8000 millis
 
-        logger.info("finished in {}", (new Date().getTime()-start));
+        long durationMillis = System.currentTimeMillis() - startMillis;
+        logger.info("finished in {} millis", durationMillis);
+        assertEquals(durationMillis, 8000, 100);
     }
 
-    private String getBody1(String url, HttpResponse.BodyHandler<String> response) {
-        logger.info("receive1 " + url);
-        delay(2);
-        return "step1";
+    private int getPriceInEur() {
+        return sleepAndGet(2000, 100);
     }
 
-    private String getBody(String url, HttpResponse.BodyHandler<byte[]> response) {
-        logger.info("receive3 " + url);
-        delay(3);
-        return "step3";
+    private float getExchangeRateEurToUsd() {
+        return sleepAndGet(3000, 1.1f);
     }
 
-    private CompletableFuture<String> getBodyAsync1(String url, HttpResponse.BodyHandler<String> response) {
-        logger.info("receive1 " + url);
-        delay(2);
-        return CompletableFuture.supplyAsync(() -> "step1");
+    private float getTax(float amount) {
+        return sleepAndGet(5000, 0.5f);
     }
 
-    private CompletableFuture<String> getBodyAsync(String url, HttpResponse.BodyHandler<byte[]> response) {
-        logger.info("receive3 " + url);
-        delay(3);
-        return CompletableFuture.supplyAsync(() -> "step3");
+    private <T> T sleepAndGet(int millis, T value) {
+        logger.info(value + " started");
+        sleep(millis);
+        logger.info(value + " finished");
+        return value;
     }
 
-    private void process(Info info) {
-    }
-
-    private void delay() {
+    private void sleep(int millis) {
         try {
-           Thread.sleep(1000);
+            TimeUnit.MILLISECONDS.sleep(millis);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    private void delay(int i) {
-        try {
-            Thread.sleep(i*1000);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    class Info {
-
-        private String url;
-
-        public Info() {
-            this.url ="step0";
-        }
-
-        public String getUrl() {
-            return url;
-        }
-
-
-        public String findImage(String page) {
-            logger.info("receive2 " + page);
-            return "step2";
-        }
-
-        public Info setImageData(String data) {
-            logger.info("receive4 " + data);
-            return this;
-        }
-
     }
 }
