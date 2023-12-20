@@ -38,7 +38,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         assertEquals("one", CONTEXT.get());
     }
 
-//    private static final ScopedValue<String> NAME = ScopedValue.newInstance();
+    private static final ScopedValue<String> NAME = ScopedValue.newInstance();
 
     @Test
     public void scopedValuesTest() {
