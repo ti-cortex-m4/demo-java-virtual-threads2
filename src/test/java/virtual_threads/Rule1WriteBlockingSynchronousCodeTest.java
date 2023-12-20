@@ -23,18 +23,17 @@ public class Rule1WriteBlockingSynchronousCodeTest {
         try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             long startMillis = System.currentTimeMillis();
 
-            Future<Float> future = executorService.submit(() -> { // non-blocking
-                int priceInEur = readPriceInEur(); // blocking
-                float netAmountInUsd = priceInEur * readExchangeRateEurToUsd(); // blocking
-                float tax = readTax(netAmountInUsd); // blocking
+            Future<Float> future = executorService.submit(() -> {
+                int priceInEur = readPriceInEur();
+                float netAmountInUsd = priceInEur * readExchangeRateEurToUsd();
+                float tax = readTax(netAmountInUsd);
                 return netAmountInUsd * (1 + tax);
             });
 
-            float grossAmountInUsd = future.get(); // blocking
+            float grossAmountInUsd = future.get();
             assertEquals(165, grossAmountInUsd);
 
             long durationMillis = System.currentTimeMillis() - startMillis;
-            logger.info("blocking synchronous code finished in {} millis", durationMillis);
             assertEquals(durationMillis, 10000, 100);
         }
     }
@@ -44,17 +43,16 @@ public class Rule1WriteBlockingSynchronousCodeTest {
         try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             long startMillis = System.currentTimeMillis();
 
-            Future<Integer> priceInEur = executorService.submit(this::readPriceInEur); // non-blocking
-            Future<Float> exchangeRateEurToUsd = executorService.submit(this::readExchangeRateEurToUsd); // non-blocking
-            float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // blocking
+            Future<Integer> priceInEur = executorService.submit(this::readPriceInEur);
+            Future<Float> exchangeRateEurToUsd = executorService.submit(this::readExchangeRateEurToUsd);
+            float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get();
 
-            Future<Float> tax = executorService.submit(() -> readTax(netAmountInUsd)); // non-blocking
-            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking
+            Future<Float> tax = executorService.submit(() -> readTax(netAmountInUsd));
+            float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
 
             assertEquals(165, grossAmountInUsd);
 
             long durationMillis = System.currentTimeMillis() - startMillis;
-            logger.info("blocking asynchronous code finished in {} millis", durationMillis);
             assertEquals(durationMillis, 8000, 100);
         }
     }
@@ -63,20 +61,19 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     public void nonBlockingAsynchronousCodeTest() throws InterruptedException, ExecutionException {
         long startMillis = System.currentTimeMillis();
 
-        CompletableFuture.supplyAsync(this::readPriceInEur) // non-blocking
-            .thenCombine(CompletableFuture.supplyAsync(this::readExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) // non-blocking
-            .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + readTax(amount)))) // non-blocking
-            .whenComplete((grossAmountInUsd, t) -> { // non-blocking
+        CompletableFuture.supplyAsync(this::readPriceInEur)
+            .thenCombine(CompletableFuture.supplyAsync(this::readExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate)
+            .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + readTax(amount))))
+            .whenComplete((grossAmountInUsd, t) -> {
                 if (t == null) {
                     assertEquals(165, grossAmountInUsd);
                 } else {
                     fail(t);
                 }
             })
-            .get(); // blocking
+            .get();
 
         long durationMillis = System.currentTimeMillis() - startMillis;
-        logger.info("non-blocking synchronous code finished in {} millis", durationMillis);
         assertEquals(durationMillis, 8000, 100);
     }
 
