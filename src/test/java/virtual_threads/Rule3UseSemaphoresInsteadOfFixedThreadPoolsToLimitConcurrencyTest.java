@@ -8,27 +8,26 @@ import java.util.concurrent.Semaphore;
 
 public class Rule3UseSemaphoresInsteadOfFixedThreadPoolsToLimitConcurrencyTest {
 
-    ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
-    String foo1() throws ExecutionException, InterruptedException {
-       Future<String> future = executorService.submit(() -> limitedService());
-       return future.get();
+    public Object useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
+        Future<Object> future = executorService.submit(() -> sharedResource());
+        return future.get();
     }
 
+    private final Semaphore semaphore = new Semaphore(10);
 
-    Semaphore semaphore = new Semaphore(10);
-
-    String foo2() throws InterruptedException {
+    public Object useSemaphoreToLimitConcurrency() throws InterruptedException {
         semaphore.acquire();
         try {
-            return limitedService();
+            return sharedResource();
         } finally {
             semaphore.release();
         }
     }
 
 
-    private String limitedService() {
+    private String sharedResource() {
         return "";
     }
 }
