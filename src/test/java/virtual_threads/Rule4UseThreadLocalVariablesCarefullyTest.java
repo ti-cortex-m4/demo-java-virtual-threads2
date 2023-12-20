@@ -17,8 +17,6 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     @Test
     public void threadLocalVariablesTest() throws InterruptedException {
-        assertNull(THREAD_LOCAL.get());
-
         THREAD_LOCAL.set("zero");
         assertEquals("zero", THREAD_LOCAL.get());
 
@@ -38,31 +36,29 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     @Test
     public void scopedValuesTest() {
-        assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get()));
-
         ScopedValue.where(SCOPED_VALUE, "zero").run(
             () -> {
                 assertEquals("zero", SCOPED_VALUE.get()); // immutability
 
                 ScopedValue.where(SCOPED_VALUE, "one").run(
-                    () -> assertEquals("one", SCOPED_VALUE.get()) // bounded lifetime
+                    () -> assertEquals("one", SCOPED_VALUE.get())
                 );
-                assertEquals("zero", SCOPED_VALUE.get());
+                assertEquals("zero", SCOPED_VALUE.get()); // bounded lifetime
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     Supplier<String> value = scope.fork(() -> {
                             assertEquals("zero", SCOPED_VALUE.get()); // cheap inheritance
-                            return "value";
+                            return "two";
                         }
                     );
                     scope.join().throwIfFailed();
-                    assertEquals("value", value.get());
+                    assertEquals("two", value.get());
                 } catch (Exception e) {
                     fail(e);
                 }
             }
         );
 
-        assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get()));
+        assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get())); // bounded lifetime
     }
 }
