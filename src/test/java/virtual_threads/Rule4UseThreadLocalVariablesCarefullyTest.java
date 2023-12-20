@@ -59,6 +59,8 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                 @Override
                 public void run() {
                     assertEquals("zero", CONTEXT2.get());
+                    doSomething2();
+                    assertEquals("zero", CONTEXT2.get());
                 }
             });
 
@@ -67,8 +69,6 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                 assertNull(CONTEXT2.get());
             });
 
-//        doSomething2();
-//        assertEquals("zero", CONTEXT2.get()); // unbounded lifetime
 
 //        Thread childThread = new Thread(new Runnable() {
 //            @Override
@@ -83,9 +83,10 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
     }
 
     private void doSomething2() {
-        ScopedValue.where(CONTEXT2, "zero").run(
-            () -> System.out.println(CONTEXT2.get())
-        );
-        //assertEquals("one", CONTEXT2.get());
+        ScopedValue.where(CONTEXT2, "one").run(
+            () -> {
+                assertEquals("one", CONTEXT2.get());
+            }
+            );
     }
 }
