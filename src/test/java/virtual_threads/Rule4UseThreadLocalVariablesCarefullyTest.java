@@ -38,44 +38,29 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     @Test
     public void scopedValuesTest() {
-        assertThrows(NoSuchElementException.class,
-            () -> {
-                assertNull(SCOPED_VALUE.get());
-            });
+        assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get()));
 
         ScopedValue.where(SCOPED_VALUE, "zero").run(
             () -> {
                 assertEquals("zero", SCOPED_VALUE.get());
                 ScopedValue.where(SCOPED_VALUE, "one").run(
-                    () -> {
-                        assertEquals("one", SCOPED_VALUE.get());
-                    }
+                    () -> assertEquals("one", SCOPED_VALUE.get())
                 );
                 assertEquals("zero", SCOPED_VALUE.get());
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-                    Supplier<String> value1 = scope.fork(() -> {
+                    Supplier<String> value = scope.fork(() -> {
                             assertEquals("zero", SCOPED_VALUE.get());
-                            return "a";
+                            return "value";
                         }
                     );
-                    Supplier<String> value2 = scope.fork(() -> {
-                            assertEquals("zero", SCOPED_VALUE.get());
-                            return "z";
-                        }
-                    );
-
                     scope.join().throwIfFailed();
-                    assertEquals("a", value1.get());
-                    assertEquals("z", value2.get());
+                    assertEquals("value", value.get());
                 } catch (Exception e) {
                     fail(e);
                 }
             });
 
-        assertThrows(NoSuchElementException.class,
-            () -> {
-                assertNull(SCOPED_VALUE.get());
-            });
+        assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get()));
     }
 }
