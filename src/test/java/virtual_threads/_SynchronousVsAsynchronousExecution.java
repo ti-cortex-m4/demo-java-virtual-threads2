@@ -4,8 +4,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalTime;
-import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -18,8 +16,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class _SynchronousVsAsynchronousExecution {
 
-    protected static final Logger logger = LoggerFactory.getLogger(_SynchronousVsAsynchronousExecution.class);
-
+    private static final Logger logger = LoggerFactory.getLogger(_SynchronousVsAsynchronousExecution.class);
 
     @Test
     public void blockingSynchronousStyleTest() throws ExecutionException, InterruptedException {
@@ -27,19 +24,15 @@ public class _SynchronousVsAsynchronousExecution {
             long startMillis = System.currentTimeMillis();
 
             Future<Float> future = executorService.submit(() -> { // non-blocking
-                logger.info("task started");
-
                 int netAmountInUsd = getPriceInEur() * getExchangeRateEurToUsd(); // blocking
                 float tax = getTax(netAmountInUsd); // blocking
-                float grossAmountInUsd = netAmountInUsd * (1 + tax);
-
-                return grossAmountInUsd;
+                return netAmountInUsd * (1 + tax);
             });
 
             float grossAmountInUsd = future.get(); // blocking
             assertEquals(300, grossAmountInUsd);
 
-            logger.info("finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 10000 millis
+            logger.info("blocking synchronous code finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 10000 millis
         }
     }
 
@@ -56,7 +49,7 @@ public class _SynchronousVsAsynchronousExecution {
             float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking
 
             assertEquals(300, grossAmountInUsd);
-            logger.info("finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 8000 millis
+            logger.info("blocking asynchronous code finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 8000 millis
         }
     }
 
@@ -76,31 +69,31 @@ public class _SynchronousVsAsynchronousExecution {
             })
             .get(); // blocking
 
-        logger.info("finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 8000 millis
+        logger.info("non-blocking asynchronous code finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 8000 millis
     }
 
     private int getPriceInEur() {
-        return sleepAndGet(2, 100);
+        return sleepAndGet(2000, 100);
     }
 
     private int getExchangeRateEurToUsd() {
-        return sleepAndGet(3, 2);
+        return sleepAndGet(3000, 2);
     }
 
     private float getTax(int amount) {
-        return sleepAndGet(5, 50) / 100f;
+        return sleepAndGet(5000, 50) / 100f;
     }
 
-    protected static <T> T sleepAndGet(int seconds, T message) {
-        logger.info(message + " started");
-        sleep(seconds);
-        logger.info(message + " finished");
-        return message;
+    private <T> T sleepAndGet(int millis, T value) {
+        logger.info(value + " started");
+        sleep(millis);
+        logger.info(value + " finished");
+        return value;
     }
 
-    protected static void sleep(int seconds) {
+    private void sleep(int millis) {
         try {
-            TimeUnit.SECONDS.sleep(seconds);
+            TimeUnit.MILLISECONDS.sleep(millis);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
