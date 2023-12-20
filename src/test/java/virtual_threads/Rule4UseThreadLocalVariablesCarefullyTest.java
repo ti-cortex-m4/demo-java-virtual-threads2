@@ -17,11 +17,11 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     @Test
     public void threadLocalVariablesTest() throws InterruptedException {
-        THREAD_LOCAL.set("zero");
+        THREAD_LOCAL.set("zero"); // mutability
         assertEquals("zero", THREAD_LOCAL.get());
 
         THREAD_LOCAL.set("one");
-        assertEquals("one", THREAD_LOCAL.get()); // unconstrained mutability
+        assertEquals("one", THREAD_LOCAL.get());
 
         Thread childThread = new Thread(() -> {
             assertEquals("one", THREAD_LOCAL.get()); // expensive inheritance
@@ -41,9 +41,9 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                 assertEquals("zero", SCOPED_VALUE.get()); // immutability
 
                 ScopedValue.where(SCOPED_VALUE, "one").run(
-                    () -> assertEquals("one", SCOPED_VALUE.get())
+                    () -> assertEquals("one", SCOPED_VALUE.get()) // bounded lifetime
                 );
-                assertEquals("zero", SCOPED_VALUE.get()); // bounded lifetime
+                assertEquals("zero", SCOPED_VALUE.get());
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     Supplier<String> value = scope.fork(() -> {
