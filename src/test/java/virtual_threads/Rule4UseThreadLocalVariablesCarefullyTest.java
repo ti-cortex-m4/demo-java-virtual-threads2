@@ -20,10 +20,10 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         assertNull(THREAD_LOCAL.get());
 
         THREAD_LOCAL.set("zero");
-        assertEquals("zero", THREAD_LOCAL.get()); // unconstrained mutability
+        assertEquals("zero", THREAD_LOCAL.get());
 
         THREAD_LOCAL.set("one");
-        assertEquals("one", THREAD_LOCAL.get()); // unbounded lifetime
+        assertEquals("one", THREAD_LOCAL.get()); // unconstrained mutability
 
         Thread childThread = new Thread(() -> {
             assertEquals("one", THREAD_LOCAL.get()); // expensive inheritance
@@ -31,7 +31,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         childThread.join();
 
         THREAD_LOCAL.remove();
-        assertNull(THREAD_LOCAL.get());
+        assertNull(THREAD_LOCAL.get()); // unbounded lifetime
     }
 
     private static final ScopedValue<String> SCOPED_VALUE = ScopedValue.newInstance();
@@ -44,13 +44,13 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
             () -> {
                 assertEquals("zero", SCOPED_VALUE.get());
                 ScopedValue.where(SCOPED_VALUE, "one").run(
-                    () -> assertEquals("one", SCOPED_VALUE.get())
+                    () -> assertEquals("one", SCOPED_VALUE.get()) // bounded lifetime
                 );
                 assertEquals("zero", SCOPED_VALUE.get());
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     Supplier<String> value = scope.fork(() -> {
-                            assertEquals("zero", SCOPED_VALUE.get());
+                            assertEquals("zero", SCOPED_VALUE.get()); // inheritance
                             return "value";
                         }
                     );
