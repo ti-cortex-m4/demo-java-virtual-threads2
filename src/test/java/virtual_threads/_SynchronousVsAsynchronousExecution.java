@@ -24,15 +24,16 @@ public class _SynchronousVsAsynchronousExecution {
             long startMillis = System.currentTimeMillis();
 
             Future<Float> future = executorService.submit(() -> { // non-blocking
-                int netAmountInUsd = getPriceInEur() * getExchangeRateEurToUsd(); // blocking
+                int priceInEur = getPriceInEur(); // blocking
+                float netAmountInUsd = priceInEur * getExchangeRateEurToUsd(); // blocking
                 float tax = getTax(netAmountInUsd); // blocking
                 return netAmountInUsd * (1 + tax);
             });
 
-            float grossAmountInUsd = future.get(); // blocking
-            assertEquals(300, grossAmountInUsd);
+            float grossAmountInUsd = future.get(); // blocking, ~10000 millis
+            assertEquals(165, grossAmountInUsd);
 
-            logger.info("blocking synchronous code finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 10000 millis
+            logger.info("finished in {} millis", System.currentTimeMillis() - startMillis);
         }
     }
 
@@ -42,14 +43,14 @@ public class _SynchronousVsAsynchronousExecution {
             long startMillis = System.currentTimeMillis();
 
             Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); // non-blocking
-            Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); // non-blocking
-            int netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // blocking
+            Future<Float> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); // non-blocking
+            float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // blocking
 
             Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); // non-blocking
-            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking
+            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking ~8000 millis
 
-            assertEquals(300, grossAmountInUsd);
-            logger.info("blocking asynchronous code finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 8000 millis
+            assertEquals(165, grossAmountInUsd);
+            logger.info("finished in {} millis", System.currentTimeMillis() - startMillis);
         }
     }
 
@@ -62,26 +63,26 @@ public class _SynchronousVsAsynchronousExecution {
             .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) // non-blocking
             .whenComplete((grossAmountInUsd, throwable) -> { // non-blocking
                 if (throwable == null) {
-                    assertEquals(300, grossAmountInUsd);
+                    assertEquals(165, grossAmountInUsd);
                 } else {
                     fail(throwable);
                 }
             })
-            .get(); // blocking
+            .get(); // blocking ~8000 millis
 
-        logger.info("non-blocking asynchronous code finished in {} millis", System.currentTimeMillis() - startMillis); // ~ 8000 millis
+        logger.info("finished in {} millis", System.currentTimeMillis() - startMillis);
     }
 
     private int getPriceInEur() {
         return sleepAndGet(2000, 100);
     }
 
-    private int getExchangeRateEurToUsd() {
-        return sleepAndGet(3000, 2);
+    private float getExchangeRateEurToUsd() {
+        return sleepAndGet(3000, 1.1f);
     }
 
-    private float getTax(int amount) {
-        return sleepAndGet(5000, 50) / 100f;
+    private float getTax(float amount) {
+        return sleepAndGet(5000, 0.5f);
     }
 
     private <T> T sleepAndGet(int millis, T value) {
