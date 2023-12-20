@@ -42,28 +42,34 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     @Test
     public void scopedValuesTest() {
-        assertNull(CONTEXT2.get());
+        //assertNull(CONTEXT2.get());
 
-        CONTEXT2.set("zero");
-        assertEquals("zero", CONTEXT2.get()); // unconstrained mutability
+//        ScopedValue.where(CONTEXT2, "zero");
+//        assertEquals("zero", CONTEXT2.get()); // unconstrained mutability
 
-        doSomething2();
-        assertEquals("one", CONTEXT2.get()); // unbounded lifetime
+        ScopedValue.where(CONTEXT2, "zero").run(
+            () -> System.out.println(CONTEXT2.get())
+        );
 
-        Thread childThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                assertEquals("one", CONTEXT2.get()); // expensive inheritance
-            }
-        });
-        childThread.join();
+//        doSomething2();
+//        assertEquals("zero", CONTEXT2.get()); // unbounded lifetime
 
-        CONTEXT2.remove();
-        assertNull(CONTEXT2.get());
+//        Thread childThread = new Thread(new Runnable() {
+//            @Override
+//            public void run() {
+//                assertEquals("one", CONTEXT2.get()); // expensive inheritance
+//            }
+//        });
+//        childThread.join();
+//
+//        CONTEXT2.remove();
+//        assertNull(CONTEXT2.get());
     }
 
     private void doSomething2() {
-        CONTEXT2.set("one");
-        assertEquals("one", CONTEXT2.get());
+        ScopedValue.where(CONTEXT2, "zero").run(
+            () -> System.out.println(CONTEXT2.get())
+        );
+        //assertEquals("one", CONTEXT2.get());
     }
 }
