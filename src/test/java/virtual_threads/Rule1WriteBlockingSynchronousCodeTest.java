@@ -30,7 +30,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
                 return netAmountInUsd * (1 + tax);
             });
 
-            float grossAmountInUsd = future.get(); // blocking, ~10000 millis
+            float grossAmountInUsd = future.get(); // blocking
             assertEquals(165, grossAmountInUsd);
 
             long durationMillis = System.currentTimeMillis() - startMillis;
@@ -49,7 +49,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
             float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // blocking
 
             Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); // non-blocking
-            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking, ~8000 millis
+            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking
 
             assertEquals(165, grossAmountInUsd);
 
@@ -73,7 +73,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
                     fail(throwable);
                 }
             })
-            .get(); // blocking, ~8000 millis
+            .get(); // blocking
 
         long durationMillis = System.currentTimeMillis() - startMillis;
         logger.info("finished in {} millis", durationMillis);
