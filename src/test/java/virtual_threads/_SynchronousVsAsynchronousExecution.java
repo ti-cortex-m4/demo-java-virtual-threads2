@@ -50,34 +50,20 @@ public class _SynchronousVsAsynchronousExecution {
 
     @Test
     public void testAsynchronousWithFuture() throws InterruptedException, ExecutionException {
-        ExecutorService executorService = Executors.newCachedThreadPool();
+        try (ExecutorService executorService = Executors.newCachedThreadPool()){
+            long start = new Date().getTime();
+            logger.info("task started");
 
-        logger.info("this task started");
+            Future<Integer> priceInEur = executorService.submit(this::getPriceInEur);
+            Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd);
+            int netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get();
 
-        Future<Integer> priceInEur = executorService.submit(this::getPriceInEur);
-        Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd);
+            Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd));
+            float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
 
-        while (!priceInEur.isDone() || !exchangeRateEurToUsd.isDone()) { // non-blocking
-            Thread.sleep(100);
-            logger.info("another task is running");
+            assertEquals(300, grossAmountInUsd);
+            logger.info("task finished in {}", new Date().getTime() - start);
         }
-
-        int netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // actually non-blocking
-        Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd));
-
-        while (!tax.isDone()) { // non-blocking
-            Thread.sleep(100);
-            logger.info("another task is running");
-        }
-
-        float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // actually non-blocking
-
-        logger.info("this task finished: {}", grossAmountInUsd);
-
-        executorService.shutdown();
-        executorService.awaitTermination(60, TimeUnit.SECONDS);
-
-        logger.info("another task is running");
     }
 
     @Test
