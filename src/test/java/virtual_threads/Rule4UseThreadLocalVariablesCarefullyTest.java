@@ -42,7 +42,8 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
         ScopedValue.where(SCOPED_VALUE, "zero").run(
             () -> {
-                assertEquals("zero", SCOPED_VALUE.get());
+                assertEquals("zero", SCOPED_VALUE.get()); // immutability
+
                 ScopedValue.where(SCOPED_VALUE, "one").run(
                     () -> assertEquals("one", SCOPED_VALUE.get()) // bounded lifetime
                 );
@@ -50,7 +51,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     Supplier<String> value = scope.fork(() -> {
-                            assertEquals("zero", SCOPED_VALUE.get()); // inheritance
+                            assertEquals("zero", SCOPED_VALUE.get()); // cheap inheritance
                             return "value";
                         }
                     );
@@ -59,7 +60,8 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                 } catch (Exception e) {
                     fail(e);
                 }
-            });
+            }
+        );
 
         assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get()));
     }
