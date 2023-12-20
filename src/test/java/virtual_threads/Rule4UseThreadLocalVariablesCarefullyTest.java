@@ -2,9 +2,12 @@ package virtual_threads;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.NoSuchElementException;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Rule4UseThreadLocalVariablesCarefullyTest {
@@ -42,7 +45,10 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     @Test
     public void scopedValuesTest() {
-        //assertNull(CONTEXT2.get());
+        assertThrows(NoSuchElementException.class,
+            ()->{
+                assertNull(CONTEXT2.get());
+            });
 
 //        ScopedValue.where(CONTEXT2, "zero");
 //        assertEquals("zero", CONTEXT2.get()); // unconstrained mutability
@@ -50,6 +56,11 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         ScopedValue.where(CONTEXT2, "zero").run(
             () -> System.out.println(CONTEXT2.get())
         );
+
+        assertThrows(NoSuchElementException.class,
+            ()->{
+                assertNull(CONTEXT2.get());
+            });
 
 //        doSomething2();
 //        assertEquals("zero", CONTEXT2.get()); // unbounded lifetime
