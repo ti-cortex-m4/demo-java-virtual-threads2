@@ -37,6 +37,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
     }
 
     private void doSomething() {
+        assertEquals("zero", CONTEXT.get());
         CONTEXT.set("one");
         assertEquals("one", CONTEXT.get());
     }
@@ -54,8 +55,12 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 //        assertEquals("zero", CONTEXT2.get()); // unconstrained mutability
 
         ScopedValue.where(CONTEXT2, "zero").run(
-            () -> System.out.println(CONTEXT2.get())
-        );
+            new Runnable() {
+                @Override
+                public void run() {
+                    assertEquals("zero", CONTEXT2.get());
+                }
+            });
 
         assertThrows(NoSuchElementException.class,
             ()->{
