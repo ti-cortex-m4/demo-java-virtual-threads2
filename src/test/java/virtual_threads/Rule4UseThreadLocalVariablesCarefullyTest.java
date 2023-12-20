@@ -4,16 +4,32 @@ import org.junit.jupiter.api.Test;
 
 public class Rule4UseThreadLocalVariablesCarefullyTest {
 
+    private static final ThreadLocal<String> CONTEXT = new ThreadLocal<>();
+
     @Test
     public void threadLocalVariablesTest() {
+        System.out.println(CONTEXT.get());
+        CONTEXT.set("one");
+        System.out.println(CONTEXT.get());
+        CONTEXT.remove();
+
+        //create
+        //modify in method - change
+        //delete
+        //inherit in child thread
     }
 
-    public final static ScopedValue<String> LOGGED_IN_USER = ScopedValue.newInstance();
+    private static final ScopedValue<String> NAME = ScopedValue.newInstance();
 
     @Test
     public void scopedValuesTest() {
-//        ScopedValue.where(LOGGED_IN_USER, user.get()).run(() -> service.getData());
+        System.out.println(NAME.get());
+        ScopedValue.where(NAME, "one");
+        System.out.println(NAME.get());
 
-//        User loggedInUser = Server.LOGGED_IN_USER.get();
+        //create
+        //modify in method - do not change
+        //delete ???
+        //inherit in child thread ???
     }
 }
