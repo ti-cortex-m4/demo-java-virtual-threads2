@@ -29,13 +29,8 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         });
         childThread.join();
 
-
         CONTEXT.remove();
         assertNull(CONTEXT.get());
-        //create
-        //modify in method - change
-        //delete
-        //inherit in child thread
     }
 
     private void doSomething() {
