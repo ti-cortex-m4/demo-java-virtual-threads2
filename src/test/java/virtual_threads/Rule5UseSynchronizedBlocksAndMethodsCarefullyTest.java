@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
 
-    private final ReentrantLock reentrantLock = new ReentrantLock();
+    private final ReentrantLock reentrantLock = new ReentrantLock(); // static ?
 
     @Test
     public void doTest() throws InterruptedException, ExecutionException {
@@ -19,7 +19,7 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
         }
     }
 
-    private final Object lockObject = new Object();
+    private final Object lockObject = new Object(); // static ?
 
     @Test
     public void doNotTest() throws InterruptedException, ExecutionException {
