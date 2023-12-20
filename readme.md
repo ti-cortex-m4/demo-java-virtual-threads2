@@ -379,11 +379,10 @@ The following code uses a _synchronized_ block with an explicit object lock.
 ```
 private final Object lockObject = new Object();
 
-@Test
-public void lockObjectTest() {
-synchronized (lockObject) {
-exclusiveResource();
-}
+public void useSynchronizedBlock() {
+   synchronized (lockObject) {
+       exclusiveResource();
+   }
 }
 ```
 
@@ -394,14 +393,13 @@ The following code uses a reentrant lock.
 ```
 private final ReentrantLock reentrantLock = new ReentrantLock();
 
-@Test
-public void reentrantLockTest() {
-reentrantLock.lock();
-try {
-exclusiveResource();
-} finally {
-reentrantLock.unlock();
-}
+public void useReentrantLock() {
+   reentrantLock.lock();
+   try {
+       exclusiveResource();
+   } finally {
+       reentrantLock.unlock();
+   }
 }
 ```
 

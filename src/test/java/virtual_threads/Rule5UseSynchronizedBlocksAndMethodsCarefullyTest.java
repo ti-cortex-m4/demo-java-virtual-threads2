@@ -9,7 +9,7 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
     private final ReentrantLock reentrantLock = new ReentrantLock();
 
     @Test
-    public void reentrantLockTest() {
+    public void useReentrantLock() {
         reentrantLock.lock();
         try {
             exclusiveResource();
@@ -18,14 +18,15 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
         }
     }
 
+
     private final Object lockObject = new Object();
 
-    @Test
-    public void lockObjectTest() {
+    public void useSynchronizedBlock() {
         synchronized (lockObject) {
             exclusiveResource();
         }
     }
+
 
     private void exclusiveResource() {
     }
