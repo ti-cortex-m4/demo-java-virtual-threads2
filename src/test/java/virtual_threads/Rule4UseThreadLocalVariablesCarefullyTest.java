@@ -16,7 +16,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
     private static final ThreadLocal<String> THREAD_LOCAL = new ThreadLocal<>();
 
     @Test
-    public void threadLocalVariablesTest() throws InterruptedException {
+    public void threadLocalVariableTest() throws InterruptedException {
         THREAD_LOCAL.set("zero"); // mutability
         assertEquals("zero", THREAD_LOCAL.get());
 
@@ -35,7 +35,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
     private static final ScopedValue<String> SCOPED_VALUE = ScopedValue.newInstance();
 
     @Test
-    public void scopedValuesTest() {
+    public void scopedValueTest() {
         ScopedValue.where(SCOPED_VALUE, "zero").run(
             () -> {
                 assertEquals("zero", SCOPED_VALUE.get()); // immutability

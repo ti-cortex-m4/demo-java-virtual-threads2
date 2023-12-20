@@ -66,15 +66,10 @@ public class _SynchronousVsAsynchronousExecution {
     public void testAsynchronousWithCompletableFuture() throws InterruptedException {
         Date start = new Date();
 
-        CompletableFuture<Integer> priceInEur = CompletableFuture.supplyAsync(this::getPriceInEur);
-        CompletableFuture<Integer> exchangeRateEurToUsd = CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd);
-
-        CompletableFuture<Integer> netAmountInUsd = priceInEur
-                .thenCombine(exchangeRateEurToUsd, (price, exchangeRate) -> price * exchangeRate);
-
         logger.info("this task started");
 
-        netAmountInUsd
+        CompletableFuture.supplyAsync(this::getPriceInEur)
+                .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate)
                 .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount))))
                 .whenComplete((grossAmountInUsd, throwable) -> {
                     if (throwable == null) {
