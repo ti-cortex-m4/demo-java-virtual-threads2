@@ -1,27 +1,3 @@
-<!-----
-
-
-
-Conversion time: 1.012 seconds.
-
-
-Using this Markdown file:
-
-1. Paste this output into your source file.
-2. See the notes and action items below regarding this conversion run.
-3. Check the rendered output (headings, lists, code blocks, tables) for proper
-   formatting and use a linkchecker before you publish this page.
-
-Conversion notes:
-
-* Docs to Markdown version 1.0β35
-* Mon Dec 18 2023 11:03:42 GMT-0800 (PST)
-* Source doc: Google Translate
-* This is a partial selection. Check to make sure intra-doc links work.
------>
-
-
-
 #### Creating virtual threads
 
 The constructors of the _Thread_ class and its subclasses can only create platform threads.The sealed _Thread.Builder_ interface provides greater ability to create threads than the constructors. The _Thread.Builder.OfPlatform_ subinterface could create platform threads, and the _Thread.Builder.OfVirtual_ subinterface could create virtual threads.
@@ -87,7 +63,7 @@ thread.join();
 ```
 
 
-The following example creates a platform thread with all the options available in the _Thread.Builder.ofPlatform_ thread builder interface.
+The following example creates a platform thread with all the options available in the _Thread.Builder.ofPlatform_ interface.
 
 
 ```
@@ -108,7 +84,7 @@ assertEquals(10, thread.getPriority());
 ```
 
 
-The following example creates a virtual thread with all the options available in the _Thread.Builder.OfVirtual_ thread builder interface.
+The following example creates a virtual thread with all the options available in the _Thread.Builder.OfVirtual_ interface.
 
 
 ```
@@ -135,9 +111,9 @@ The previous example shows that the following parameters cannot be specified whe
 * stack size
 
 
-###### Creating virtual threads from thread factory
+###### Creating virtual threads from a thread factory
 
-Builders are the best alternative to constructors (see "Effective Java" 3rd edition by Joshua Bloch, items 1, 2). Interface _Thread.Builder_ was added in Java 21 and is not yet widely used. Much wider use is made of the _ThreadFactory_ interface, which was added in Java 1.5. The _Thread.Builder.factory_ interface method returns a thread-safe _ThreadFactory_ instance to create threads from the current state of the builder.
+Builders are the best alternative to constructors (see "Effective Java" 3rd edition by Joshua Bloch, items 1 and 2). Interface _Thread.Builder_ was added in Java 21 and is not yet widely used. Much wider use is made of the _ThreadFactory_ interface, which was added in Java 1.5. The _Thread.Builder.factory()_ interface method returns a thread-safe _ThreadFactory_ instance to create threads from the current state of the builder.
 
 The following example creates a virtual thread from a factory created from the current state of the builder.
 
@@ -153,6 +129,20 @@ assertEquals(Thread.State.NEW, thread.getState());
 ```
 
 
+
+###### Creating virtual threads from an executor service
+
+Thread pools allow you to separate the creation (and destruction) of threads and the execution of tasks by reusable threads. The two main parts of the thread pools executors for platform threads are the worker thread pool and the task queue. Virtual thread executors created in the _Executors.newVirtualThreadPerTaskExecutor()_ method  implement the same _ExecutorService_ interface, but their implementation is different: they create a new virtual thread for each task.
+
+The following example creates an unbounded, thread-per-task _ExecutorService_ instance, passes a _Runnable_ task to it, waits for it to complete, and closes the executor service.
+
+
+```
+try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+   Future<?> future = executorService.submit(() -> System.out.println("run"));
+   future.get();
+}
+```
 
 ### How to properly use virtual threads
 
@@ -177,17 +167,17 @@ The following non-blocking, asynchronous code won't get much benefit from using 
 
 
 ```
-CompletableFuture.supplyAsync(this::getPriceInEur)
-.thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate)
-.thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount))))
-.whenComplete((grossAmountInUsd, t) -> {
-if (t == null) {
-assertEquals(165, grossAmountInUsd);
-} else {
-fail(t);
-}
-})
-.get();
+CompletableFuture.supplyAsync(this::getPriceInEur) 
+   .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) 
+   .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) 
+   .whenComplete((grossAmountInUsd, t) -> { 
+       if (t == null) {
+           assertEquals(165, grossAmountInUsd);
+       } else {
+           fail(t);
+       }
+   })
+   .get(); 
 ```
 
 
@@ -196,15 +186,15 @@ The following blocking, synchronous code also won't get much benefit from using 
 
 ```
 try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-Future<Float> future = executorService.submit(() -> {
-int priceInEur = getPriceInEur();
-float netAmountInUsd = priceInEur * getExchangeRateEurToUsd();
-float tax = getTax(netAmountInUsd);
-return netAmountInUsd * (1 + tax);
-});
+   Future<Float> future = executorService.submit(() -> { 
+       int priceInEur = getPriceInEur(); 
+       float netAmountInUsd = priceInEur * getExchangeRateEurToUsd(); 
+       float tax = getTax(netAmountInUsd); 
+       return netAmountInUsd * (1 + tax);
+   });
 
-float grossAmountInUsd = future.get();
-assertEquals(165, grossAmountInUsd);
+   float grossAmountInUsd = future.get(); 
+   assertEquals(165, grossAmountInUsd);
 }
 ```
 
@@ -214,14 +204,14 @@ The following blocking, asynchronous code will benefit from using virtual thread
 
 ```
 try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-Future<Integer> priceInEur = executorService.submit(this::getPriceInEur);
-Future<Float> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd);
-float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get();
+   Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); 
+   Future<Float> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); 
+   float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); 
 
-Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd));
-float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
+   Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
+   float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
 
-assertEquals(165, grossAmountInUsd);
+   assertEquals(165, grossAmountInUsd);
 }
 ```
 
@@ -238,7 +228,7 @@ The following code incorrectly uses the thread pool executor to reuse virtual th
 
 ```
 try (ExecutorService executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
-…
+    …
 }
 ```
 
@@ -248,7 +238,7 @@ The following code correctly uses a _thread-per-request_ virtual executor to cre
 
 ```
 try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-…
+    …
 }
 ```
 
@@ -256,7 +246,7 @@ try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor
 
 ###### Use semaphores instead of fixed thread pools to limit concurrency
 
-The _main_ objective of thread pools is to reuse threads; they can be for 1 worker thread, several worker threads, or an unlimited number of worker threads. (Depending on the configuration of the thread pool, the number of worket threads may expand or decrease). When submitting tasks to a thread pool, they are placed in a queue, from which they are retrieved by the worker threads (see _ThreadPoolExecutor#workQueue_). 
+The _main_ objective of thread pools is to reuse threads; they can be for 1 worker thread, several worker threads, or an unlimited number of worker threads. (Depending on the configuration of the thread pool, the number of worket threads may expand or decrease). When submitting tasks to a thread pool, they are placed in a queue, from which they are retrieved by the worker threads (see _ThreadPoolExecutor#workQueue_).
 
 An _additional _objective when using thread pools with a fixed number of workert threads is that they can be used  to limit the concurrency of a certain operation. (For example, some external services may not be able to handle more than N concurrent requests). But since there is no need to reuse virtual threads, instead of thread pools with a fixed number of worker threads, it is better to use [semaphores](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Semaphore.html) with the same number of permits to limit concurrency. Semaphores also contain a queue inside themselves, but not of tasks, but of threads that are blocked on it (see _AbstractQueuedSynchronizer#head_).
 
@@ -267,8 +257,8 @@ The following code, which uses a fixed thread pool to limit the concurrency of a
 private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
 public Object useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
-Future<Object> future = executorService.submit(() -> sharedResource());
-return future.get();
+   Future<Object> future = executorService.submit(() -> sharedResource());
+   return future.get();
 }
 ```
 
@@ -280,12 +270,12 @@ The following code, which uses a semaphore to limit the concurrency of accessing
 private final Semaphore semaphore = new Semaphore(10);
 
 public Object useSemaphoreToLimitConcurrency() throws InterruptedException {
-semaphore.acquire();
-try {
-return sharedResource();
-} finally {
-semaphore.release();
-}
+   semaphore.acquire();
+   try {
+       return sharedResource();
+   } finally {
+       semaphore.release();
+   }
 }
 ```
 
@@ -311,21 +301,20 @@ The following code shows that a thread-local variable is mutable, inherited in a
 ```
 private static final ThreadLocal<String> THREAD_LOCAL = new ThreadLocal<>();
 
-@Test
-public void threadLocalVariableTest() throws InterruptedException {
-THREAD_LOCAL.set("zero"); // mutability
-assertEquals("zero", THREAD_LOCAL.get());
+public void useThreadLocalVariable() throws InterruptedException {
+   THREAD_LOCAL.set("zero"); // mutability
+   assertEquals("zero", THREAD_LOCAL.get());
 
-THREAD_LOCAL.set("one");
-assertEquals("one", THREAD_LOCAL.get());
+   THREAD_LOCAL.set("one");
+   assertEquals("one", THREAD_LOCAL.get());
 
-Thread childThread = new Thread(() -> {
-assertEquals("one", THREAD_LOCAL.get()); // expensive inheritance
-});
-childThread.join();
+   Thread childThread = new Thread(() -> {
+       assertEquals("one", THREAD_LOCAL.get()); // expensive inheritance
+   });
+   childThread.join();
 
-THREAD_LOCAL.remove();
-assertNull(THREAD_LOCAL.get()); // unbounded lifetime
+   THREAD_LOCAL.remove();
+   assertNull(THREAD_LOCAL.get()); // unbounded lifetime
 }
 ```
 
@@ -336,11 +325,10 @@ The following code shows that a scoped value is immutable, is reused in a struct
 ```
 private static final ScopedValue<String> SCOPED_VALUE = ScopedValue.newInstance();
 
- @Test
- public void scopedValueTest() {
-       ScopedValue.where(SCOPED_VALUE, "zero").run(
-     () -> {
-          assertEquals("zero", SCOPED_VALUE.get()); // immutability
+public void useScopedValue() {
+   ScopedValue.where(SCOPED_VALUE, "zero").run(
+       () -> {
+           assertEquals("zero", SCOPED_VALUE.get());
 
            ScopedValue.where(SCOPED_VALUE, "one").run(
                () -> assertEquals("one", SCOPED_VALUE.get()) // bounded lifetime
@@ -350,18 +338,18 @@ private static final ScopedValue<String> SCOPED_VALUE = ScopedValue.newInstance(
            try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                Supplier<String> value = scope.fork(() -> {
                        assertEquals("zero", SCOPED_VALUE.get()); // cheap inheritance
-                       return "two";
+                       return null;
                    }
                );
                scope.join().throwIfFailed();
-               assertEquals("two", value.get());
+               assertNull(value.get());
            } catch (Exception e) {
                fail(e);
            }
        }
-);
+   );
 
-assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get())); // bounded lifetime
+   assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get())); // bounded lifetime
 }
 ```
 
@@ -379,7 +367,7 @@ The following code uses a _synchronized_ block with an explicit object lock.
 ```
 private final Object lockObject = new Object();
 
-public void useSynchronizedBlock() {
+public void useReentrantLock() {
    synchronized (lockObject) {
        exclusiveResource();
    }
@@ -393,7 +381,7 @@ The following code uses a reentrant lock.
 ```
 private final ReentrantLock reentrantLock = new ReentrantLock();
 
-public void useReentrantLock() {
+public void useSynchronizedBlock() {
    reentrantLock.lock();
    try {
        exclusiveResource();
