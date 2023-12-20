@@ -24,9 +24,9 @@ public class Rule1WriteBlockingSynchronousCodeTest {
             long startMillis = System.currentTimeMillis();
 
             Future<Float> future = executorService.submit(() -> { // non-blocking
-                int priceInEur = getPriceInEur(); // blocking
-                float netAmountInUsd = priceInEur * getExchangeRateEurToUsd(); // blocking
-                float tax = getTax(netAmountInUsd); // blocking
+                int priceInEur = readPriceInEur(); // blocking
+                float netAmountInUsd = priceInEur * readExchangeRateEurToUsd(); // blocking
+                float tax = readTax(netAmountInUsd); // blocking
                 return netAmountInUsd * (1 + tax);
             });
 
@@ -44,11 +44,11 @@ public class Rule1WriteBlockingSynchronousCodeTest {
         try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             long startMillis = System.currentTimeMillis();
 
-            Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); // non-blocking
-            Future<Float> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); // non-blocking
+            Future<Integer> priceInEur = executorService.submit(this::readPriceInEur); // non-blocking
+            Future<Float> exchangeRateEurToUsd = executorService.submit(this::readExchangeRateEurToUsd); // non-blocking
             float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // blocking
 
-            Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); // non-blocking
+            Future<Float> tax = executorService.submit(() -> readTax(netAmountInUsd)); // non-blocking
             float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking
 
             assertEquals(165, grossAmountInUsd);
@@ -63,9 +63,9 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     public void nonBlockingAsynchronousCodeTest() throws InterruptedException, ExecutionException {
         long startMillis = System.currentTimeMillis();
 
-        CompletableFuture.supplyAsync(this::getPriceInEur) // non-blocking
-            .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) // non-blocking
-            .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) // non-blocking
+        CompletableFuture.supplyAsync(this::readPriceInEur) // non-blocking
+            .thenCombine(CompletableFuture.supplyAsync(this::readExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) // non-blocking
+            .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + readTax(amount)))) // non-blocking
             .whenComplete((grossAmountInUsd, t) -> { // non-blocking
                 if (t == null) {
                     assertEquals(165, grossAmountInUsd);
@@ -80,15 +80,15 @@ public class Rule1WriteBlockingSynchronousCodeTest {
         assertEquals(durationMillis, 8000, 100);
     }
 
-    private int getPriceInEur() {
+    private int readPriceInEur() {
         return sleepAndGet(2000, 100);
     }
 
-    private float getExchangeRateEurToUsd() {
+    private float readExchangeRateEurToUsd() {
         return sleepAndGet(3000, 1.1f);
     }
 
-    private float getTax(float amount) {
+    private float readTax(float amount) {
         return sleepAndGet(5000, 0.5f);
     }
 
