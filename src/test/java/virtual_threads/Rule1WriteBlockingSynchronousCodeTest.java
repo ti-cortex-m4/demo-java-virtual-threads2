@@ -66,11 +66,11 @@ public class Rule1WriteBlockingSynchronousCodeTest {
         CompletableFuture.supplyAsync(this::getPriceInEur) // non-blocking
             .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) // non-blocking
             .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) // non-blocking
-            .whenComplete((grossAmountInUsd, throwable) -> { // non-blocking
-                if (throwable == null) {
+            .whenComplete((grossAmountInUsd, t) -> { // non-blocking
+                if (t == null) {
                     assertEquals(165, grossAmountInUsd);
                 } else {
-                    fail(throwable);
+                    fail(t);
                 }
             })
             .get(); // blocking
