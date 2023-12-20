@@ -26,11 +26,8 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         CONTEXT.set("one");
         assertEquals("one", CONTEXT.get()); // unbounded lifetime
 
-        Thread childThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                assertEquals("one", CONTEXT.get()); // expensive inheritance
-            }
+        Thread childThread = new Thread(() -> {
+            assertEquals("one", CONTEXT.get()); // expensive inheritance
         });
         childThread.join();
 
@@ -46,35 +43,32 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
             });
 
         ScopedValue.where(CONTEXT2, "zero").run(
-            new Runnable() {
-                @Override
-                public void run() {
-                    assertEquals("zero", CONTEXT2.get());
-                    ScopedValue.where(CONTEXT2, "one").run(
-                        () -> {
-                            assertEquals("one", CONTEXT2.get());
+            () -> {
+                assertEquals("zero", CONTEXT2.get());
+                ScopedValue.where(CONTEXT2, "one").run(
+                    () -> {
+                        assertEquals("one", CONTEXT2.get());
+                    }
+                );
+                assertEquals("zero", CONTEXT2.get());
+
+                try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+                    Supplier<String> value1 = scope.fork(() -> {
+                            assertEquals("zero", CONTEXT2.get());
+                            return "a";
                         }
                     );
-                    assertEquals("zero", CONTEXT2.get());
+                    Supplier<String> value2 = scope.fork(() -> {
+                            assertEquals("zero", CONTEXT2.get());
+                            return "z";
+                        }
+                    );
 
-                    try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-                        Supplier<String> value1   = scope.fork(() -> {
-                                assertEquals("zero", CONTEXT2.get());
-                                return "a";
-                            }
-                        );
-                        Supplier<String> value2   = scope.fork(() -> {
-                                assertEquals("zero", CONTEXT2.get());
-                                return "z";
-                            }
-                        );
-
-                        scope.join().throwIfFailed();
-                        assertEquals("a", value1.get());
-                        assertEquals("z", value2.get());
-                    } catch (Exception e) {
-                        fail(e);
-                    }
+                    scope.join().throwIfFailed();
+                    assertEquals("a", value1.get());
+                    assertEquals("z", value2.get());
+                } catch (Exception e) {
+                    fail(e);
                 }
             });
 
@@ -82,15 +76,5 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
             () -> {
                 assertNull(CONTEXT2.get());
             });
-
-
-//        Thread childThread = new Thread(new Runnable() {
-//            @Override
-//            public void run() {
-//                assertEquals("one", CONTEXT2.get()); // expensive inheritance
-//            }
-//        });
-//        childThread.join();
     }
-
 }
