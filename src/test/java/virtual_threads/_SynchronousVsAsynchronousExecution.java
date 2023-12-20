@@ -33,7 +33,9 @@ public class _SynchronousVsAsynchronousExecution {
             float grossAmountInUsd = future.get(); // blocking, ~10000 millis
             assertEquals(165, grossAmountInUsd);
 
-            logger.info("finished in {} millis", System.currentTimeMillis() - startMillis);
+            long durationMillis = System.currentTimeMillis() - startMillis;
+            logger.info("finished in {} millis", durationMillis);
+            assertEquals(durationMillis, 10000, 100);
         }
     }
 
@@ -47,10 +49,13 @@ public class _SynchronousVsAsynchronousExecution {
             float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // blocking
 
             Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); // non-blocking
-            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking ~8000 millis
+            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking, ~8000 millis
 
             assertEquals(165, grossAmountInUsd);
-            logger.info("finished in {} millis", System.currentTimeMillis() - startMillis);
+
+            long durationMillis = System.currentTimeMillis() - startMillis;
+            logger.info("finished in {} millis", durationMillis);
+            assertEquals(durationMillis, 8000, 100);
         }
     }
 
@@ -68,9 +73,11 @@ public class _SynchronousVsAsynchronousExecution {
                     fail(throwable);
                 }
             })
-            .get(); // blocking ~8000 millis
+            .get(); // blocking, ~8000 millis
 
-        logger.info("finished in {} millis", System.currentTimeMillis() - startMillis);
+        long durationMillis = System.currentTimeMillis() - startMillis;
+        logger.info("finished in {} millis", durationMillis);
+        assertEquals(durationMillis, 8000, 100);
     }
 
     private int getPriceInEur() {
