@@ -18,7 +18,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     protected static final Logger logger = LoggerFactory.getLogger(Rule1WriteBlockingSynchronousCodeTest.class);
     
     @Test
-    public void doTest() throws InterruptedException, ExecutionException {
+    public void doTest() {
         try {
             long start = new Date().getTime();
 
@@ -36,7 +36,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
     }
 
     @Test
-    public void doNotTest() throws InterruptedException, ExecutionException {
+    public void doNotTest() {
         Info info = new Info();
         ExecutorService executor = Executors.newCachedThreadPool();
 

@@ -48,11 +48,11 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     Supplier<String> value = scope.fork(() -> {
                             assertEquals("zero", SCOPED_VALUE.get()); // cheap inheritance
-                            return "two";
+                            return null;
                         }
                     );
                     scope.join().throwIfFailed();
-                    assertEquals("two", value.get());
+                    assertNull(value.get());
                 } catch (Exception e) {
                     fail(e);
                 }

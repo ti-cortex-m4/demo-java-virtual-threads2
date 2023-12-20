@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Example3ThreadBuildersTest {
 
     @Test
-    public void platformThreadBuilderTest() throws InterruptedException, ExecutionException {
+    public void platformThreadBuilderTest() {
         Thread.Builder builder = Thread.ofPlatform()
             .group(Thread.currentThread().getThreadGroup())
             .daemon(false)
@@ -30,7 +30,7 @@ public class Example3ThreadBuildersTest {
     }
 
     @Test
-    public void virtualThreadBuilderTest() throws InterruptedException, ExecutionException {
+    public void virtualThreadBuilderTest() {
         Thread.Builder builder = Thread.ofVirtual()
             .name("virtual thread")
             .inheritInheritableThreadLocals(false)

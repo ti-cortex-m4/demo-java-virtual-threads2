@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Example5ThreadFactoryTest {
 
     @Test
-    public void virtualThreadFactoryTest() throws InterruptedException, ExecutionException {
+    public void virtualThreadFactoryTest() {
         Thread.Builder builder = Thread.ofVirtual()
             .name("virtual thread");
         ThreadFactory threadFactory = builder.factory();

@@ -7,7 +7,7 @@ import java.util.concurrent.Future;
 
 public class VT {
 
-    public static void main(String[] args) throws InterruptedException, ExecutionException {
+    public static void main(String[] args) {
         new Thread(); // Thread.ofPlatform().unstarted(task);
 
         Thread.ofPlatform();

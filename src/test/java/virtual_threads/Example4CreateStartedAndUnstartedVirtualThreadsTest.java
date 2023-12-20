@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
 
     @Test
-    public void createStartedThreadTest() throws InterruptedException, ExecutionException {
+    public void createStartedThreadTest() throws InterruptedException {
         Thread.Builder builder = Thread.ofVirtual();
         Thread thread = builder.start(() -> { sleep(1000); System.out.println("run"); });
         assertEquals(Thread.State.RUNNABLE, thread.getState());
@@ -18,7 +18,7 @@ public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
     }
 
     @Test
-    public void createUnstartedThreadTest() throws InterruptedException, ExecutionException {
+    public void createUnstartedThreadTest() throws InterruptedException {
         Thread.Builder builder = Thread.ofVirtual();
         Thread thread = builder.unstarted(() -> System.out.println("run"));
         assertEquals(Thread.State.NEW, thread.getState());

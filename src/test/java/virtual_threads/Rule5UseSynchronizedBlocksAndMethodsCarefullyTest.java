@@ -2,15 +2,14 @@ package virtual_threads;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
 
-    private final ReentrantLock reentrantLock = new ReentrantLock(); // static ?
+    private final ReentrantLock reentrantLock = new ReentrantLock();
 
     @Test
-    public void doTest() throws InterruptedException, ExecutionException {
+    public void reentrantLockTest() {
         reentrantLock.lock();
         try {
             exclusiveResource();
@@ -19,10 +18,10 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
         }
     }
 
-    private final Object lockObject = new Object(); // static ?
+    private final Object lockObject = new Object();
 
     @Test
-    public void doNotTest() throws InterruptedException, ExecutionException {
+    public void lockObjectTest() {
         synchronized (lockObject) {
             exclusiveResource();
         }
