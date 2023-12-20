@@ -3,10 +3,13 @@ package virtual_threads;
 import org.junit.jupiter.api.Test;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.StructuredTaskScope;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class Rule4UseThreadLocalVariablesCarefullyTest {
 
@@ -54,6 +57,18 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                         }
                     );
                     assertEquals("zero", CONTEXT2.get());
+
+                    try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+                        scope.fork(() -> {
+                                assertEquals("zero", CONTEXT2.get());
+                            return null;
+                        }
+                        ); // (1)
+                        //upplier<List<Offer>> offers = scope.fork(() -> fetchOffers());   // (2)
+                        scope.join().throwIfFailed();
+                    } catch (Exception e) {
+                        fail(e);
+                    }
                 }
             });
 
