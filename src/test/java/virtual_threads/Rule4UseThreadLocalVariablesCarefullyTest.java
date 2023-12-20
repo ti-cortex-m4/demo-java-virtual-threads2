@@ -4,9 +4,9 @@ import org.junit.jupiter.api.Test;
 
 import java.util.NoSuchElementException;
 import java.util.concurrent.StructuredTaskScope;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     private static final ThreadLocal<String> CONTEXT = new ThreadLocal<>();
+    private static final ScopedValue<String> CONTEXT2 = ScopedValue.newInstance();
 
     @Test
     public void threadLocalVariablesTest() throws InterruptedException {
@@ -37,8 +38,6 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         assertNull(CONTEXT.get());
     }
 
-    private static final ScopedValue<String> CONTEXT2 = ScopedValue.newInstance();
-
     @Test
     public void scopedValuesTest() {
         assertThrows(NoSuchElementException.class,
@@ -59,13 +58,20 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                     assertEquals("zero", CONTEXT2.get());
 
                     try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-                        scope.fork(() -> {
+                        Supplier<String> value1   = scope.fork(() -> {
                                 assertEquals("zero", CONTEXT2.get());
-                            return null;
-                        }
-                        ); // (1)
-                        //upplier<List<Offer>> offers = scope.fork(() -> fetchOffers());   // (2)
+                                return "a";
+                            }
+                        );
+                        Supplier<String> value2   = scope.fork(() -> {
+                                assertEquals("zero", CONTEXT2.get());
+                                return "z";
+                            }
+                        );
+
                         scope.join().throwIfFailed();
+                        assertEquals("a", value1.get());
+                        assertEquals("z", value2.get());
                     } catch (Exception e) {
                         fail(e);
                     }
