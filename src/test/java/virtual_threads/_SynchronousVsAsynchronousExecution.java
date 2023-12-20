@@ -35,24 +35,31 @@ public class _SynchronousVsAsynchronousExecution {
     }
 
     @Test
-    public void testSynchronous() {
-        logger.info("this task started");
-        Date start = new Date();
+    public void blockingSynchronousStyleTest() throws ExecutionException, InterruptedException {
+        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+            long start = new Date().getTime();
 
-        int netAmountInUsd = getPriceInEur() * getExchangeRateEurToUsd(); // blocking
-        float tax = getTax(netAmountInUsd); // blocking
-        float grossAmountInUsd = netAmountInUsd * (1 + tax);
+            Future<Float> future = executorService.submit(() -> {
+                logger.info("task started");
 
-        logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime() - start.getTime()));
+                int netAmountInUsd = getPriceInEur() * getExchangeRateEurToUsd(); // blocking
+                float tax = getTax(netAmountInUsd); // blocking
+                float grossAmountInUsd = netAmountInUsd * (1 + tax);
 
-        logger.info("another task started");
+                return grossAmountInUsd;
+            });
+
+            float grossAmountInUsd = future.get();
+            assertEquals(300, grossAmountInUsd);
+
+            logger.info("task finished in {}", new Date().getTime() - start);
+        }
     }
 
     @Test
-    public void testAsynchronousWithFuture() throws InterruptedException, ExecutionException {
-        try (ExecutorService executorService = Executors.newCachedThreadPool()){
+    public void blockingAsynchronousStyleTest() throws InterruptedException, ExecutionException {
+        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             long start = new Date().getTime();
-            logger.info("task started");
 
             Future<Integer> priceInEur = executorService.submit(this::getPriceInEur);
             Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd);
