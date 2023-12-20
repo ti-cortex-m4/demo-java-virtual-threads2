@@ -12,9 +12,27 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 public class _SynchronousVsAsynchronousExecution {
 
     protected static final Logger logger = LoggerFactory.getLogger(_SynchronousVsAsynchronousExecution.class);
+
+    protected static void sleep(int seconds) {
+        try {
+            TimeUnit.SECONDS.sleep(seconds);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    protected static <T> T sleepAndGet(int seconds, T message) {
+        logger.info(message + " started");
+        sleep(seconds);
+        logger.info(message + " finished");
+        return message;
+    }
 
     @Test
     public void testSynchronous() {
@@ -25,7 +43,7 @@ public class _SynchronousVsAsynchronousExecution {
         float tax = getTax(netAmountInUsd); // blocking
         float grossAmountInUsd = netAmountInUsd * (1 + tax);
 
-        logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime()-start.getTime()));
+        logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime() - start.getTime()));
 
         logger.info("another task started");
     }
@@ -63,24 +81,24 @@ public class _SynchronousVsAsynchronousExecution {
     }
 
     @Test
-    public void testAsynchronousWithCompletableFuture() throws InterruptedException {
-        Date start = new Date();
-
-        logger.info("this task started");
+    public void nonBlockingAsynchronousStyleTest() throws InterruptedException, ExecutionException {
+        long start = new Date().getTime();
+        logger.info("task started");
 
         CompletableFuture.supplyAsync(this::getPriceInEur)
-                .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate)
-                .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount))))
-                .whenComplete((grossAmountInUsd, throwable) -> {
-                    if (throwable == null) {
-                        logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime()-start.getTime()));
-                    } else {
-                        logger.warn("this task failed: {}", throwable.getMessage());
-                    }
-                }); // non-blocking
+            .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate)
+            .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount))))
+            .whenComplete((grossAmountInUsd, throwable) -> {
+                if (throwable == null) {
+                    logger.info("task finished in {}", new Date().getTime() - start);
+                    assertEquals(300, grossAmountInUsd);
+                } else {
+                    fail(throwable);
+                }
+            })
+            .get();
 
-        logger.info("another task started");
-        Thread.sleep(10000);
+        logger.info("task finished");
     }
 
     @Test
@@ -94,12 +112,12 @@ public class _SynchronousVsAsynchronousExecution {
                 float tax = getTax(netAmountInUsd); // blocking
                 float grossAmountInUsd = netAmountInUsd * (1 + tax);
 
-                logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime()-start.getTime()));
+                logger.info("this task finished: {} in {}", grossAmountInUsd, (new Date().getTime() - start.getTime()));
             }
         );
         thread.join();
 
-        logger.info("this task finished: in {}", (new Date().getTime()-start.getTime()));
+        logger.info("this task finished: in {}", (new Date().getTime() - start.getTime()));
     }
 
     private int getPriceInEur() {
@@ -112,22 +130,6 @@ public class _SynchronousVsAsynchronousExecution {
 
     private float getTax(int amount) {
         return sleepAndGet(5, 50) / 100f;
-    }
-
-
-    protected static void sleep(int seconds) {
-        try {
-            TimeUnit.SECONDS.sleep(seconds);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    protected static <T> T sleepAndGet(int seconds, T message) {
-        logger.info(message + " started");
-        sleep(seconds);
-        logger.info(message + " finished");
-        return message;
     }
 
 //    protected static <T> T sleepAndGet(T message) {
