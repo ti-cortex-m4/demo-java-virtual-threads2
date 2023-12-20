@@ -34,7 +34,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
             assertEquals(165, grossAmountInUsd);
 
             long durationMillis = System.currentTimeMillis() - startMillis;
-            logger.info("finished in {} millis", durationMillis);
+            logger.info("blocking synchronous code finished in {} millis", durationMillis);
             assertEquals(durationMillis, 10000, 100);
         }
     }
@@ -54,7 +54,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
             assertEquals(165, grossAmountInUsd);
 
             long durationMillis = System.currentTimeMillis() - startMillis;
-            logger.info("finished in {} millis", durationMillis);
+            logger.info("blocking asynchronous code finished in {} millis", durationMillis);
             assertEquals(durationMillis, 8000, 100);
         }
     }
@@ -76,7 +76,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
             .get(); // blocking
 
         long durationMillis = System.currentTimeMillis() - startMillis;
-        logger.info("finished in {} millis", durationMillis);
+        logger.info("non-blocking synchronous code finished in {} millis", durationMillis);
         assertEquals(durationMillis, 8000, 100);
     }
 
