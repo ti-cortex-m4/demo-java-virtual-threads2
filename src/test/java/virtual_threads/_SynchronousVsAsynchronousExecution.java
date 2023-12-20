@@ -61,12 +61,12 @@ public class _SynchronousVsAsynchronousExecution {
         try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             long start = new Date().getTime();
 
-            Future<Integer> priceInEur = executorService.submit(this::getPriceInEur);
-            Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd);
-            int netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get();
+            Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); // non-blocking
+            Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); // non-blocking
+            int netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); // blocking
 
-            Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd));
-            float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
+            Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); // non-blocking
+            float grossAmountInUsd = netAmountInUsd * (1 + tax.get()); // blocking
 
             assertEquals(300, grossAmountInUsd);
             logger.info("task finished in {}", new Date().getTime() - start);
@@ -78,10 +78,10 @@ public class _SynchronousVsAsynchronousExecution {
         long start = new Date().getTime();
         logger.info("task started");
 
-        CompletableFuture.supplyAsync(this::getPriceInEur)
-            .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate)
-            .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount))))
-            .whenComplete((grossAmountInUsd, throwable) -> {
+        CompletableFuture.supplyAsync(this::getPriceInEur) // non-blocking
+            .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) // non-blocking
+            .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) // non-blocking
+            .whenComplete((grossAmountInUsd, throwable) -> { // non-blocking
                 if (throwable == null) {
                     logger.info("task finished in {}", new Date().getTime() - start);
                     assertEquals(300, grossAmountInUsd);
@@ -89,7 +89,7 @@ public class _SynchronousVsAsynchronousExecution {
                     fail(throwable);
                 }
             })
-            .get();
+            .get(); // blocking
 
         logger.info("task finished");
     }
