@@ -1,3 +1,29 @@
+## Introduction
+
+Virtual threads are lightweight threads designed to use computing resources more efficiently than pre-existing Java threads. Virtual threads enable a competitive “one thread per blocking call” concurrent model that is easier for developers than _futures/promises_ and _reactive streams_. Virtual threads support the APIs and semantics of pre-existing threads. But to effectively use virtual Streams, developers need to follow some guidelines (recommendations) related to the features of their implementation.
+
+Virtual threads were added in Java 19 as a preview feature and released in Java 21.
+
+
+## Platform threads and virtual threads
+
+A _thread_ is the smallest unit of processing that can be scheduled thatt runs concurrently with other such units. A Java thread is an instance of [java.lang.Thread](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Thread.html). There are two kinds of threads, platform threads and virtual threads.
+
+A _platform thread_ is implemented as a thin wrapper around an OS thread. A platform thread runs Java code on its underlying OS thread, and the platform thread captures its OS thread for the platform thread's entire lifetime. Consequently, the number of available platform threads is limited to the number of OS threads.
+
+>Platform threads suitable for running all types of tasks but are not recommended for blocking I/O operations ( because a blocked platform thread blocks the OS thread, which may be a limited resource).
+
+However, a virtual thread isn't tied to a specific OS thread. A virtual thread still runs code on an OS thread. However, when code running in a virtual thread calls a blocking I/O operation, the Java runtime suspends the virtual thread until it can be resumed. The OS thread associated with the suspended virtual thread is now free to perform operations for other virtual threads. Unlike platform threads, virtual threads typically have a shallow call stack, performing as few as a single HTTP client call or a single JDBC query.  The number of available platform threads in a single JVM might support millions of virtual threads.
+
+>Virtual threads are recommended for numerous blocking I/O operations and are not recommended for long running CPU-bound operations. Virtual threads are suitable for running tasks that spend most of the time blocked, often waiting for I/O operations to complete. However, they aren't intended for long-running CPU-intensive operations.
+
+However, virtual threads are managed by the Java runtime and are not thin, one-to-one wrappers over OS threads. Instead, virtual threads are implemented in user space by the Java runtime.
+
+Use virtual threads in high-throughput concurrent applications, especially those that consist of a great number of concurrent tasks that spend much of their time waiting. Server applications are examples of high-throughput applications because they typically handle many client requests that perform blocking I/O operations such as fetching resources.
+
+Virtual threads are not faster threads; they do not run code any faster than platform threads. They exist to provide scale (higher throughput), not speed (lower latency).
+
+
 #### Creating virtual threads
 
 The constructors of the _Thread_ class and its subclasses can only create platform threads.The sealed _Thread.Builder_ interface provides greater ability to create threads than the constructors. The _Thread.Builder.OfPlatform_ subinterface could create platform threads, and the _Thread.Builder.OfVirtual_ subinterface could create virtual threads.
@@ -144,12 +170,30 @@ try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor
 }
 ```
 
+
+
+### Scheduling virtual threads
+
+The operating system schedules when a platform thread is run. However, the Java runtime schedules when a virtual thread is run. When the Java runtime schedules a virtual thread, it assigns or _mounts_ the virtual thread on a platform thread, then the operating system schedules that platform thread as usual. This platform thread is called a _carrier_. After running some code, the virtual thread can _unmount_ from its carrier. This usually happens when the virtual thread performs a blocking I/O operation. After a virtual thread unmounts from its carrier, the carrier is free, which means that the Java runtime scheduler can mount a different virtual thread on it.
+
+A virtual thread cannot be unmounted during blocking operations when it is _pinned_ to its carrier. A virtual thread is pinned in the following situations:
+
+
+
+* The virtual thread runs code inside a synchronized block or method
+* The virtual thread runs a native method or a foreign function
+
+Pinning does not make an application incorrect, but it might hinder its scalability. Try avoiding frequent and long-lived pinning by revising synchronized blocks or methods that run frequently and guarding potentially long I/O operations with java.util.concurrent.locks.ReentrantLock.
+
+
 ### How to properly use virtual threads
 
 Virtual threads were created to increase parallelism (the number of tasks running at the same time) when multicore CPUs became ubiquitous (around 2000). Virtual threads almost fully support the API and semantics of the _Thread_ class. Virtual threads shift the objective of processing blocking threads from a programmer to the Java runtime. But to get a real parallelism performance boost, the programmer must know the details of their implementations (or at least the rules of thumb when to use virtual threads and when not).
 
 
 ###### Do not use virtual threads for CPU-intensive tasks
+
+Use them for blocking operations (HTTP call or database query).
 
 
 ###### Do not use virtual threads if their number is less than 10000
@@ -357,9 +401,11 @@ public void useScopedValue() {
 
 ###### Use synchronized blocks and methods carefully or switch to reentrant locks
 
+for good scalability with virtual threads, avoid frequent and long-lived pinning by revising synchronized blocks and methods that run often and contain I/O operations, particularly long-running ones. In this case, a good alternative to synchronization is a ReentrantLock
+
 To achieve better scalability of virtual threads, you should revise _synchronized_ blocks and methods, especially lengthy and frequent ones (that often contain I/O operations). As an althernative, you should replace them with _ReentrantLock_ that also guarantees sequential access to a resource.
 
-When a virtual thread performs a blocking operation inside a _synchronized_ block or method, this does not release the OS thread. This situation is called _pinning_, and it contradicts the ideology of virtual threads, according to which one OS thread controls many virtual threads. Pinning is not a problem if such operations are short-lived (such as in-memory operations) even if they are frequent. Pinning is also not a problem if such operations are long-term (such as IO operations) but infrequent. Pinning is a problem if such operations are both lengthy and frequent. To get rid of pinning, you should replace _synchronized_ blocks and methods with _ReentrantLock_ that also guarantees mutually exclusive access to a resource.
+When a virtual thread performs a blocking operation inside a _synchronized_ block or method, this does not release the OS thread (_pinning_). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. To get rid of pinning, where it is both long-lived and frequent, you should replace these _synchronized_ blocks and methods with _ReentrantLock_ that also guarantees mutually exclusive access to a resource.
 
 The following code uses a _synchronized_ block with an explicit object lock.
 
@@ -392,8 +438,5 @@ public void useSynchronizedBlock() {
 ```
 
 
-To detect the instances of pinning that might be harmful, JDK Flight Recorder (JFR) emits the jdk.VirtualThreadPinned thread when a blocking operation is pinned; by default this event is enabled when the operation takes longer than 20ms.
 
-Alternatively, you can use the system property jdk.tracePinnedThreads to emit a stack trace when a thread blocks while pinned. Running with the option -Djdk.tracePinnedThreads=full prints a complete stack trace when a thread blocks while pinned, highlighting native frames and frames holding monitors. Running with the option -Djdk.tracePinnedThreads=short limits the output to just the problematic frames.
 
-If these mechanisms detect places where pinning is both long-lived and frequent, replace the use of synchronized with [ReentrantLock](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/locks/ReentrantLock.html) in those particular places (again, there is no need to replace synchronized where it guards short lived or infrequent operations). Guarding short-lived operations, such as in-memory operations, or infrequent ones with synchronized blocks or methods should have no adverse effect.
