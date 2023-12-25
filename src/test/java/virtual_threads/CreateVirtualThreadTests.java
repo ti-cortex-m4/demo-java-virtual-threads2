@@ -24,6 +24,7 @@ public class CreateVirtualThreadTests {
     thread.join();
     assertEquals("", thread.getName());
     assertTrue(thread.isVirtual());
+    assertTrue(thread.isVirtual());
     assertTrue(thread.isDaemon());
   }
 

@@ -42,4 +42,9 @@ public class Example3ThreadBuildersTest {
         assertTrue(thread.isDaemon());
         assertEquals(5, thread.getPriority());
     }
+
+    @Test
+    public void virtualThreadBuilderTest2() {
+        Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
+    }
 }
