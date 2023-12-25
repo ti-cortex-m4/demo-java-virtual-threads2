@@ -1,17 +1,25 @@
 @startuml
 
-scale 1.1
+scale 1.0
 
 skinparam {
     defaultTextAlignment center
+    RectangleBackgroundColor transparent
+    RectangleFontName Arial
 }
 
 rectangle Thread
-rectangle Subclasses
+rectangle SubClass1
+rectangle SubClass2
+rectangle "..." as SubClass3
+rectangle SubClassN
 rectangle "sealed\nBaseVirtualThread" as BaseVirtualThread
 rectangle "final\nVirtualThread" as VirtualThread
 
-Thread -down- Subclasses
+Thread -down- SubClass1
+Thread -down- SubClass2
+Thread -down- SubClass3
+Thread -down- SubClassN
 Thread -down- BaseVirtualThread
 BaseVirtualThread -down- VirtualThread
 
