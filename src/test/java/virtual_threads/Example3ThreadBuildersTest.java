@@ -18,12 +18,12 @@ public class Example3ThreadBuildersTest {
             .daemon(false)
             .priority(10)
             .stackSize(1024)
-            .name("platform thread")
+            .name("a platform thread")
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
-        Thread thread = builder.unstarted(() -> System.out.println("run"));
+        Thread thread = builder.unstarted(() -> System.out.println("run platform"));
 
-        assertEquals("platform thread", thread.getName());
+        assertEquals("a platform thread", thread.getName());
         assertEquals("main", thread.getThreadGroup().getName());
         assertFalse(thread.isDaemon());
         assertEquals(10, thread.getPriority());
@@ -32,12 +32,12 @@ public class Example3ThreadBuildersTest {
     @Test
     public void virtualThreadBuilderTest() {
         Thread.Builder builder = Thread.ofVirtual()
-            .name("virtual thread")
+            .name("a virtual thread")
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
-        Thread thread = builder.unstarted(() -> System.out.println("run"));
+        Thread thread = builder.unstarted(() -> System.out.println("run virtual thread"));
 
-        assertEquals("virtual thread", thread.getName());
+        assertEquals("a virtual thread", thread.getName());
         assertEquals("VirtualThreads", thread.getThreadGroup().getName());
         assertTrue(thread.isDaemon());
         assertEquals(5, thread.getPriority());

@@ -12,19 +12,26 @@ public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
     @Test
     public void createStartedThreadTest() throws InterruptedException {
         Thread.Builder builder = Thread.ofVirtual();
-        Thread thread = builder.start(() -> { sleep(1000); System.out.println("run"); });
-        assertEquals(Thread.State.RUNNABLE, thread.getState());
-        thread.join();
+
+        Thread startedThread = builder.start(() -> { sleep(1000); System.out.println("run"); });
+        assertEquals(Thread.State.RUNNABLE, startedThread.getState());
+        startedThread.join();
+
+        Thread unstartedThread = builder.unstarted(() -> System.out.println("run"));
+        assertEquals(Thread.State.NEW, unstartedThread.getState());
+        unstartedThread.start();
+        assertEquals(Thread.State.RUNNABLE, unstartedThread.getState());
+        unstartedThread.join();
     }
 
     @Test
     public void createUnstartedThreadTest() throws InterruptedException {
         Thread.Builder builder = Thread.ofVirtual();
-        Thread thread = builder.unstarted(() -> System.out.println("run"));
-        assertEquals(Thread.State.NEW, thread.getState());
-        thread.start();
-        assertEquals(Thread.State.RUNNABLE, thread.getState());
-        thread.join();
+        Thread unstartedThread = builder.unstarted(() -> System.out.println("run"));
+        assertEquals(Thread.State.NEW, unstartedThread.getState());
+        unstartedThread.start();
+        assertEquals(Thread.State.RUNNABLE, unstartedThread.getState());
+        unstartedThread.join();
     }
 
     private void sleep(int milliseconds) {
