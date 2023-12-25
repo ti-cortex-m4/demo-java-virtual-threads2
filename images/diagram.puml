@@ -1,10 +1,15 @@
 @startuml
+
 scale 1.1
+
+skinparam {
+    defaultTextAlignment center
+}
 
 rectangle Thread
 rectangle Subclasses
-rectangle BaseVirtualThread
-rectangle VirtualThread
+rectangle "sealed\nBaseVirtualThread" as BaseVirtualThread
+rectangle "final\nVirtualThread" as VirtualThread
 
 Thread -down- Subclasses
 Thread -down- BaseVirtualThread
