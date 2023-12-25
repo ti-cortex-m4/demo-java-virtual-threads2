@@ -2,18 +2,26 @@
 
 scale 1.0
 
+skinparam useBetaStyle true
+
+<style>
+    .transparentBorder {
+        LineColor transparent
+    }
+}
+</style>
+
 skinparam {
     defaultTextAlignment center
     roundCorner 0
     RectangleBackgroundColor transparent
-    RectangleBorderColor transparent
     RectangleFontName Arial
 }
 
 rectangle Thread
 rectangle SubClass1
 rectangle SubClass2
-rectangle "..." as SubClass3
+rectangle "..." as SubClass3 <<transparentBorder>>
 rectangle SubClassN
 rectangle "sealed\nBaseVirtualThread" as BaseVirtualThread
 rectangle "final\nVirtualThread" as VirtualThread
