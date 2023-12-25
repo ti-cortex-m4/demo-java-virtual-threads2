@@ -1,0 +1,13 @@
+@startuml
+scale 1.1
+
+rectangle Thread
+rectangle Subclasses
+rectangle BaseVirtualThread
+rectangle VirtualThread
+
+Thread -down- Subclasses
+Thread -down- BaseVirtualThread
+BaseVirtualThread -down- VirtualThread
+
+@enduml
