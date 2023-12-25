@@ -4,7 +4,9 @@ scale 1.0
 
 skinparam {
     defaultTextAlignment center
+    roundCorner 0
     RectangleBackgroundColor transparent
+    RectangleBorderColor transparent
     RectangleFontName Arial
 }
 
@@ -18,7 +20,7 @@ rectangle "final\nVirtualThread" as VirtualThread
 
 Thread -down- SubClass1
 Thread -down- SubClass2
-Thread -down- SubClass3
+Thread -down[#transparent]- SubClass3
 Thread -down- SubClassN
 Thread -down- BaseVirtualThread
 BaseVirtualThread -down- VirtualThread
