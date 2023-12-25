@@ -14,6 +14,7 @@ public class Example1 {
         platformThread.start();
         platformThread.join();
         assertFalse(platformThread.isVirtual());
+        assertEquals("java.lang.Thread", platformThread.getClass().getName());
     }
 
     @Test
@@ -21,5 +22,6 @@ public class Example1 {
         Thread virtualThread = Thread.startVirtualThread(() -> System.out.println("run virtual thread"));
         virtualThread.join();
         assertTrue(virtualThread.isVirtual());
+        assertEquals("java.lang.VirtualThread", virtualThread.getClass().getName());
     }
 }
