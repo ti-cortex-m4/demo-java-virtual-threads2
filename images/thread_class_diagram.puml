@@ -16,7 +16,7 @@ skinparam {
     roundCorner 0
     CardBackgroundColor transparent
     RectangleBackgroundColor transparent
-    RectangleFontName Arial
+    RectangleFontName Source Sans Pro
 }
 
 rectangle "java.lang.Thread" as Thread
@@ -24,8 +24,8 @@ rectangle SubClass1
 rectangle SubClass2
 card "..." as SubClass3
 rectangle SubClassN
-rectangle "sealed\njava.lang.BaseVirtualThread" as BaseVirtualThread
-rectangle "final\njava.lang.VirtualThread" as VirtualThread
+rectangle "<i>sealed</i>\njava.lang.BaseVirtualThread" as BaseVirtualThread
+rectangle "<i>final</i>\njava.lang.VirtualThread" as VirtualThread
 
 Thread -down- SubClass1
 Thread -down- SubClass2
