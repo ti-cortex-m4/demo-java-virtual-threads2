@@ -15,6 +15,7 @@ public class Example3 {
         Thread virtualThread = Thread.startVirtualThread(() -> { sleep(1000); System.out.println("run virtual thread"); });
 
         assertTrue(virtualThread.isVirtual());
+        assertEquals("", virtualThread.getName());
         assertEquals("VirtualThreads", virtualThread.getThreadGroup().getName());
         assertTrue(virtualThread.isDaemon());
         assertEquals(5, virtualThread.getPriority());
