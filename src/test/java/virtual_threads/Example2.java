@@ -2,23 +2,21 @@ package virtual_threads;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class Example1 {
+public class Example2 {
 
     @Test
     public void test1() throws InterruptedException {
-        Thread platformThread = new Thread(() -> System.out.println("run platform thread"));
-        platformThread.start();
+        Thread platformThread = Thread.ofPlatform().start(() -> System.out.println("run platform thread"));
         platformThread.join();
         assertFalse(platformThread.isVirtual());
     }
 
     @Test
     public void test2() throws InterruptedException {
-        Thread virtualThread = Thread.startVirtualThread(() -> System.out.println("run virtual thread"));
+        Thread virtualThread = Thread.ofVirtual().start(() -> System.out.println("run virtual thread"));
         virtualThread.join();
         assertTrue(virtualThread.isVirtual());
     }
