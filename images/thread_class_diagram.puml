@@ -5,7 +5,7 @@ scale 1.0
 skinparam useBetaStyle true
 
 <style>
-    .transparentBorder {
+    card {
         LineColor transparent
     }
 }
@@ -14,17 +14,18 @@ skinparam useBetaStyle true
 skinparam {
     defaultTextAlignment center
     roundCorner 0
+    CardBackgroundColor transparent
     RectangleBackgroundColor transparent
     RectangleFontName Arial
 }
 
-rectangle Thread
+rectangle "java.lang.Thread" as Thread
 rectangle SubClass1
 rectangle SubClass2
-rectangle "..." as SubClass3 <<transparentBorder>>
+card "..." as SubClass3
 rectangle SubClassN
-rectangle "sealed\nBaseVirtualThread" as BaseVirtualThread
-rectangle "final\nVirtualThread" as VirtualThread
+rectangle "sealed\njava.lang.BaseVirtualThread" as BaseVirtualThread
+rectangle "final\njava.lang.VirtualThread" as VirtualThread
 
 Thread -down- SubClass1
 Thread -down- SubClass2
