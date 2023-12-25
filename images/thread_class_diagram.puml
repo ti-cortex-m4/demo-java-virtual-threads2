@@ -2,8 +2,6 @@
 
 scale 1.0
 
-skinparam useBetaStyle true
-
 <style>
     card {
         LineColor transparent
