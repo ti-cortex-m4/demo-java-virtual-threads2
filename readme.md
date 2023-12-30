@@ -51,7 +51,7 @@ There are four ways to create and use virtual threads:
 * the _thread factory_
 * the _executor service_
 
-The virtual _thread builder_ allows you to create a virtual thread with all their available parameters: name, _inheritable-thread-local valiables_ inheritance flag, uncaught exception handler, and _Runnable_ task.
+The virtual _thread builder_ allows you to create a virtual thread with all their available parameters: name, _inheritable-thread-local variables_ inheritance flag, uncaught exception handler, and _Runnable_ task.
 
 
 ```
@@ -79,7 +79,7 @@ thread.join();
 ```
 
 
-The _thread factory_ allows you to create virtual threads by specifying a _Runnable_ task to the instance of the _ThreadFactory_ interface. The parameters of virtual threads are determined by the current state of the еркуфв builder from which this factor is created. (Note that the thread factory is thread-safe and the thread builder is not).
+The _thread factory_ allows you to create virtual threads by specifying a _Runnable_ task to the instance of the _ThreadFactory_ interface. The parameters of virtual threads are determined by the current state of the thread builder from which this factor is created. (Note that the thread factory is thread-safe and the thread builder is not).
 
 
 ```
@@ -112,10 +112,10 @@ code examples
 
 ## How to properly use virtual threads
 
-Virtual threads almost fully support the API and semantics of the pre-existing Thread class.  But this abstraction essentially shifts the problem of handling thread blocking from the programmer to the Java runtime environment. To get real performance gains in concurrent applications, the programmer must know the details of their implementation (or at least the rules of thumb for when virtual threads can be used and when not).
+Virtual threads almost fully support the API and semantics of the pre-existing _Thread_ class.  But this abstraction essentially shifts the problem of handling thread blocking from the programmer to the Java runtime environment. To get real performance gains in concurrent applications, the programmer must know the details of their implementation (or at least the rules of thumb for when virtual threads can be used and when not).
 
 
-### Write blocking synchronous code in the thread-per-request style
+### Write blocking synchronous code in the thread-per-task style
 
 Blocking a platform thread needlessly keeps the operand system thread (a relatively limited resource) from doing useful work. Therefore, non-blocking asynchronous frameworks (Lightbend Akka Streams, Pivotal Project Reactor, Netflix RxJava, etc.) have been developed to reduce threads blocking and increase CPU resource utilization. But their disadvantage is a more complex concurrent model, which makes it harder for programmers to develop, debug and understand such code. Such non-blocking asynchronous frameworks that use their own techniques of preventing thread blocking would not benefit much from using virtual threads.
 
@@ -148,6 +148,7 @@ The following blocking synchronous code will benefit from using virtual threads,
 try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
    Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); 
    Future<Float> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); 
+
    float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); 
 
    Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
@@ -155,3 +156,31 @@ try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor
    float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
    assertEquals(165, grossAmountInUsd);
 }
+```
+
+
+
+### Do not pool virtual threads
+
+Creating a platform thread is a rather time-consuming process, as it requires the creation of an operating system thread. Thread pools executors are designed to reuse threads between tasks and reduce this time. They contain a pool of pre-created worker threads to which _Runnable_ and _Callable_ tasks are passed through a _BlockingQueue_ instance. A worker thread is not destroyed after executing one task, but is used to execute the next task read from the task queue.
+
+Unlike platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the program logic requires the use of an _ExecutorService_ instance, use an executor specially designed for virtual threads, created in the static factory method _Executors.newVirtualThreadPerTaskExecutor_. This executor does not use a thread pool and creates a new virtual thread for each submitted task. Moreover, this executor itself is lightweight, and you can create and close it at any desired location within the _try-with-resources_ block.
+
+The following code incorrectly uses a cached thread pool executor to reuse virtual threads between tasks:
+
+
+```
+try (ExecutorService executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
+   …
+}
+```
+
+
+The following code correctly uses a _thread-per-task_ virtual thread executor to create a new thread for each task:
+
+
+```
+try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+   …
+}
+```
