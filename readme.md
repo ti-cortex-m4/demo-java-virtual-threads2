@@ -221,3 +221,79 @@ public Object useSemaphoreToLimitConcurrency() throws InterruptedException {
    }
 }
 ```
+
+
+
+### Use thread-local variables carefully or switch to scoped values
+
+To achieve better scalability of virtual threads, you should reconsider using _thread-local variables_ and _inheritable-thread-local variables_. Thread-local variables provide each thread with its own copy of a variable. A thread-local variable works as an implicit, thread-bound parameter and allows passing data from a caller to a callee through a sequence of intermediate methods.
+
+Virtual threads support thread-local behavior in the same way as platform threads. But because virtual threads can be very numerous, negative design features of local variables can be applied much more significantly:
+
+
+
+* _unconstrained mutability_ (any code that can call the get method of a thread-local variable can call the set method of that variable, even if an object in a thread-local variable is immutable)
+* _unbounded lifetime_ (once a copy of a thread-local variable is set via the set method, the value is retained for the lifetime of the thread, or until code in the thread calls the remove method)
+* _expensive inheritance_ (each child thread copies, not reuses, inheritable-thread-local variables of a parent thread)
+
+_Scoped values_ may be a better alternative to thread-local variables, especially when using large numbers of virtual threads. Unlike a thread-local variable, a scoped value is written once, is available only for a bounded context, and is inherited in a _structured concurrency_ scope.
+
+<sub>Scoped values are a preview feature in Java 20 and have not been released at the time of writing.</sub>
+
+The following code shows that a thread-local variable is mutable, is inherited in a child thread started from the parent thread, and exists until it is removed.
+
+
+```
+private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
+
+public void useThreadLocalVariable() throws InterruptedException {
+   threadLocal.set("zero");
+   assertEquals("zero", threadLocal.get());
+
+   threadLocal.set("one");
+   assertEquals("one", threadLocal.get());
+
+   Thread childThread = new Thread(() -> {
+       System.out.println(threadLocal.get()); // "one"
+   });
+   childThread.start();
+   childThread.join();
+
+   threadLocal.remove();
+   assertNull(threadLocal.get());
+}
+```
+
+
+The following code shows that a scoped value is immutable, is reused in a structured concurrency scope, and exists only in a bounded context.
+
+
+```
+private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
+
+public void useScopedValue() {
+   ScopedValue.where(scopedValue, "zero").run(
+       () -> {
+           assertEquals("zero", scopedValue.get());
+
+           ScopedValue.where(scopedValue, "one").run(
+               () -> assertEquals("one", scopedValue.get())
+           );
+           assertEquals("zero", scopedValue.get());
+
+           try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+               scope.fork(() -> {
+                       System.out.println(scopedValue.get()); // "zero"
+                       return null;
+                   }
+               );
+               scope.join().throwIfFailed();
+           } catch (InterruptedException | ExecutionException e) {
+               fail(e);
+           }
+       }
+   );
+
+   assertThrows(NoSuchElementException.class, () -> assertNull(scopedValue.get()));
+}
+```
