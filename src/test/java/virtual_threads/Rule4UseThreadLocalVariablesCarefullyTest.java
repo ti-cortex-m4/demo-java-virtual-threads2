@@ -3,6 +3,7 @@ package virtual_threads;
 import org.junit.jupiter.api.Test;
 
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.function.Supplier;
 
@@ -14,7 +15,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     private final ThreadLocal<String> threadLocal = new ThreadLocal<>();
-    private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
 
     @Test
     public void useThreadLocalVariable() throws InterruptedException {
@@ -33,8 +33,11 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         assertNull(threadLocal.get()); // unbounded lifetime
     }
 
+
+    private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
+
     @Test
-    public void useScopedValue() {
+    public void useScopedValue() throws InterruptedException {
         ScopedValue.where(scopedValue, "zero").run(
             () -> {
                 assertEquals("zero", scopedValue.get());
@@ -52,7 +55,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                     );
                     scope.join().throwIfFailed();
                     assertNull(value.get());
-                } catch (Exception e) {
+                } catch (InterruptedException | ExecutionException e) {
                     fail(e);
                 }
             }
