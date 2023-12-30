@@ -13,41 +13,40 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class Rule4UseThreadLocalVariablesCarefullyTest {
 
-    private static final ThreadLocal<String> THREAD_LOCAL = new ThreadLocal<>();
+    private final ThreadLocal<String> threadLocal = new ThreadLocal<>();
+    private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
 
     @Test
     public void useThreadLocalVariable() throws InterruptedException {
-        THREAD_LOCAL.set("zero"); // mutability
-        assertEquals("zero", THREAD_LOCAL.get());
+        threadLocal.set("zero"); // mutability
+        assertEquals("zero", threadLocal.get());
 
-        THREAD_LOCAL.set("one");
-        assertEquals("one", THREAD_LOCAL.get());
+        threadLocal.set("one");
+        assertEquals("one", threadLocal.get());
 
         Thread childThread = new Thread(() -> {
-            assertEquals("one", THREAD_LOCAL.get()); // expensive inheritance
+            assertEquals("one", threadLocal.get()); // expensive inheritance
         });
         childThread.join();
 
-        THREAD_LOCAL.remove();
-        assertNull(THREAD_LOCAL.get()); // unbounded lifetime
+        threadLocal.remove();
+        assertNull(threadLocal.get()); // unbounded lifetime
     }
-
-    private static final ScopedValue<String> SCOPED_VALUE = ScopedValue.newInstance();
 
     @Test
     public void useScopedValue() {
-        ScopedValue.where(SCOPED_VALUE, "zero").run(
+        ScopedValue.where(scopedValue, "zero").run(
             () -> {
-                assertEquals("zero", SCOPED_VALUE.get());
+                assertEquals("zero", scopedValue.get());
 
-                ScopedValue.where(SCOPED_VALUE, "one").run(
-                    () -> assertEquals("one", SCOPED_VALUE.get()) // bounded lifetime
+                ScopedValue.where(scopedValue, "one").run(
+                    () -> assertEquals("one", scopedValue.get()) // bounded lifetime
                 );
-                assertEquals("zero", SCOPED_VALUE.get());
+                assertEquals("zero", scopedValue.get());
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     Supplier<String> value = scope.fork(() -> {
-                            assertEquals("zero", SCOPED_VALUE.get()); // cheap inheritance
+                            assertEquals("zero", scopedValue.get()); // cheap inheritance
                             return null;
                         }
                     );
@@ -59,6 +58,6 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
             }
         );
 
-        assertThrows(NoSuchElementException.class, () -> assertNull(SCOPED_VALUE.get())); // bounded lifetime
+        assertThrows(NoSuchElementException.class, () -> assertNull(scopedValue.get())); // bounded lifetime
     }
 }
