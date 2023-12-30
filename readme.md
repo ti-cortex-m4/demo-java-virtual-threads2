@@ -184,3 +184,40 @@ try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor
    …
 }
 ```
+
+
+
+### Use semaphores instead of fixed thread pools to limit concurrency
+
+The main objective of thread pools is to reuse threads when executing many tasks. When tasks are submitted to a thread pool, they are placed in a task queue from which they are retrieved by worker threads for execution (see _ThreadPoolExecutor#workQueue_). An additional objective in using thread pools wi_th a fixed number of worker threads_ is that they can be used to limit the concurrency of a particular operation (for example, an external resource cannot handle more than N concurrent requests).
+
+But since there is no need to reuse virtual threads, there is no need to use thread pools with a fixed number of worker threads. Instead, it is better to use semaphores with the same number of permissions to limit concurrency. A semaphore also contains a queue inside it, not of tasks, but of threads blocked on it (see _AbstractQueuedSynchronizer#head_). So this replacement is quite functionally equivalent.
+
+The following code, which uses a fixed pool of threads to limit concurrency when accessing some shared resource, will not benefit from the use of virtual threads:
+
+
+```
+private final ExecutorService executorService = Executors.newFixedThreadPool(8);
+
+public Object useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
+   Future<Object> future = executorService.submit(() -> sharedResource());
+   return future.get();
+}
+```
+
+
+The following code, which uses a semaphore to limit concurrency when accessing some shared resource, will benefit from the use of virtual threads:
+
+
+```
+private final Semaphore semaphore = new Semaphore(8);
+
+public Object useSemaphoreToLimitConcurrency() throws InterruptedException {
+   semaphore.acquire();
+   try {
+       return sharedResource();
+   } finally {
+       semaphore.release();
+   }
+}
+```
