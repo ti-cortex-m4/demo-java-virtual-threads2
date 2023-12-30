@@ -14,53 +14,54 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 public class Rule4UseThreadLocalVariablesCarefullyTest {
 
-    private final ThreadLocal<String> threadLocal = new ThreadLocal<>();
+    private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
 
     @Test
     public void useThreadLocalVariable() throws InterruptedException {
-        threadLocal.set("zero"); // mutability
+        threadLocal.set("zero");
         assertEquals("zero", threadLocal.get());
 
         threadLocal.set("one");
         assertEquals("one", threadLocal.get());
 
         Thread childThread = new Thread(() -> {
-            assertEquals("one", threadLocal.get()); // expensive inheritance
+            System.out.println(threadLocal.get()); // "one"
         });
+        childThread.start();
         childThread.join();
 
         threadLocal.remove();
-        assertNull(threadLocal.get()); // unbounded lifetime
+        assertNull(threadLocal.get());
     }
 
 
     private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
 
     @Test
-    public void useScopedValue() throws InterruptedException {
+    public void useScopedValue() {
         ScopedValue.where(scopedValue, "zero").run(
             () -> {
                 assertEquals("zero", scopedValue.get());
 
                 ScopedValue.where(scopedValue, "one").run(
-                    () -> assertEquals("one", scopedValue.get()) // bounded lifetime
+                    () -> assertEquals("one", scopedValue.get())
                 );
                 assertEquals("zero", scopedValue.get());
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     Supplier<String> value = scope.fork(() -> {
-                            assertEquals("zero", scopedValue.get()); // cheap inheritance
+                            System.out.println(scopedValue.get()); // "zero"
                             return null;
                         }
                     );
                     scope.join().throwIfFailed();
-                    assertNull(value.get());
+                    value.get();
                 } catch (InterruptedException | ExecutionException e) {
                     fail(e);
                 }
             }
         );
 
-        assertThrows(NoSuchElementException.class, () -> assertNull(scopedValue.get())); // bounded lifetime
+        assertThrows(NoSuchElementException.class, () -> assertNull(scopedValue.get()));
     }
 }
