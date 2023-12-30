@@ -11,7 +11,7 @@ public class Rule3UseSemaphoresInsteadOfFixedThreadPoolsToLimitConcurrencyTest {
     private final ExecutorService executorService = Executors.newFixedThreadPool(10);
 
     public Object useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
-        Future<Object> future = executorService.submit(() -> sharedService());
+        Future<Object> future = executorService.submit(() -> sharedResource());
         return future.get();
     }
 
@@ -20,14 +20,14 @@ public class Rule3UseSemaphoresInsteadOfFixedThreadPoolsToLimitConcurrencyTest {
     public Object useSemaphoreToLimitConcurrency() throws InterruptedException {
         semaphore.acquire();
         try {
-            return sharedService();
+            return sharedResource();
         } finally {
             semaphore.release();
         }
     }
 
 
-    private String sharedService() {
+    private String sharedResource() {
         return "";
     }
 }
