@@ -8,7 +8,7 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
 
     private final ReentrantLock reentrantLock = new ReentrantLock();
 
-    public String useReentrantLock() {
+    public String useReentrantLockForExclusiveAccess() {
         reentrantLock.lock();
         try {
             return exclusiveResource();
@@ -20,7 +20,7 @@ public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
 
     private final Object lockObject = new Object();
 
-    public String useSynchronizedBlock() {
+    public String useSynchronizedBlockForExclusiveAccess() {
         synchronized (lockObject) {
             return exclusiveResource();
         }
