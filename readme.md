@@ -3,7 +3,7 @@
 
 ## Introduction
 
-Java _virtual threads_ are lightweight threads that are designed to make concurrent applications both simpler and more scalable. Pre-existing Java threads were based on operating system threads, which proved insufficient to meet the demands of modern concurrency. Applications such as databases or web servers should serve millions of concurrent requests, but the Java runtime cannot efficiently handle more than a few thousand. If programmers continue to use threads as the unit of concurrency, they will severely limit the throughput of their applications. Alternatively, they can switch to various _asynchronous_ APIs, which are more difficult to develop, debug and understand, but which do not block operating system threads and therefore provide much better performance.
+Java _virtual threads_ are lightweight threads that are designed to make concurrent applications both simpler and more scalable. Pre-existing Java threads were based on operating system threads, which proved insufficient to meet the demands of modern concurrency. Applications such as databases or web servers should serve millions of concurrent requests, but the Java runtime cannot efficiently handle more than a few thousand. If programmers continue to use threads as the unit of concurrency, they will severely limit the throughput of their applications. Alternatively, they can switch to various _asynchronous_ APIs ([futures/promises](https://github.com/aliakh/demo-java-completablefuture/blob/master/readme.md), [reactive streams](https://github.com/aliakh/demo-java-reactive-streams/blob/master/readme.md), etc.), which are more difficult to develop, debug and understand, but which do not block operating system threads and therefore provide much better performance.
 
 The main goal of virtual threads is to add user-space threads managed by the Java runtime, which would be used alongside the existing heavyweight, kernel-space threads managed by operating systems. Virtual threads are much more lightweight than kernel-mode threads in memory usage, and the overhead of context switching and blocking among them is close to zero. Programmers can create millions of virtual threads in a single JVM instance, and get better performance using much simpler _synchronous blocking_ code.
 
@@ -108,3 +108,50 @@ try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor
 
 
 code examples
+
+
+## How to properly use virtual threads
+
+Virtual threads almost fully support the API and semantics of the pre-existing Thread class.  But this abstraction essentially shifts the problem of handling thread blocking from the programmer to the Java runtime environment. To get real performance gains in concurrent applications, the programmer must know the details of their implementation (or at least the rules of thumb for when virtual threads can be used and when not).
+
+
+### Write blocking synchronous code in the thread-per-request style
+
+Blocking a platform thread needlessly keeps the operand system thread (a relatively limited resource) from doing useful work. Therefore, non-blocking asynchronous frameworks (Lightbend Akka Streams, Pivotal Project Reactor, Netflix RxJava, etc.) have been developed to reduce threads blocking and increase CPU resource utilization. But their disadvantage is a more complex concurrent model, which makes it harder for programmers to develop, debug and understand such code. Such non-blocking asynchronous frameworks that use their own techniques of preventing thread blocking would not benefit much from using virtual threads.
+
+In contrast, blocking a virtual thread is cheap and encouraged. It allows virtual threads to write blocking synchronous code in a simple thread-per-request style. This allows developers to create simpler but still effective concurrent code.
+
+The following non-blocking asynchronous code won't get much benefit from using virtual threads, because the _CompletableFuture_ class already manages blocking operation system threads:
+
+<sub>The following code is a simplified example of an asynchronous multistage workflow. First, we need to call two long-running methods that return a product price in the EUR and the EUR/USD exchange rate. Then, we need to calculate the net product price from the results of these methods. Then, we need to call the third long-running method that takes the net product price and returns the tax amount. Finally, we need to calculate the gross product price from the net product price and the tax amount.</sub>
+
+
+```
+CompletableFuture.supplyAsync(this::getPriceInEur) 
+   .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) 
+   .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) 
+   .whenComplete((grossAmountInUsd, t) -> { 
+       if (t == null) {
+           assertEquals(165, grossAmountInUsd);
+       } else {
+           fail(t);
+       }
+   })
+   .get(); 
+```
+
+
+The following blocking synchronous code will benefit from using virtual threads, because long-running tasks are executed in parallel in separate virtual threads:
+
+
+```
+try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+   Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); 
+   Future<Float> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); 
+   float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); 
+
+   Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
+
+   float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
+   assertEquals(165, grossAmountInUsd);
+}
