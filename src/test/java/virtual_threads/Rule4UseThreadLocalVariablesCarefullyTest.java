@@ -49,13 +49,12 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                 assertEquals("zero", scopedValue.get());
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-                    Supplier<String> value = scope.fork(() -> {
+                    scope.fork(() -> {
                             System.out.println(scopedValue.get()); // "zero"
                             return null;
                         }
                     );
                     scope.join().throwIfFailed();
-                    value.get();
                 } catch (InterruptedException | ExecutionException e) {
                     fail(e);
                 }
