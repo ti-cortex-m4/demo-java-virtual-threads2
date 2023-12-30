@@ -8,14 +8,15 @@ import java.util.concurrent.Semaphore;
 
 public class Rule3UseSemaphoresInsteadOfFixedThreadPoolsToLimitConcurrencyTest {
 
-    private final ExecutorService executorService = Executors.newFixedThreadPool(10);
+    private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
     public Object useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
         Future<Object> future = executorService.submit(() -> sharedResource());
         return future.get();
     }
 
-    private final Semaphore semaphore = new Semaphore(10);
+
+    private final Semaphore semaphore = new Semaphore(8);
 
     public Object useSemaphoreToLimitConcurrency() throws InterruptedException {
         semaphore.acquire();
