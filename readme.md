@@ -170,8 +170,11 @@ The following code incorrectly uses a cached thread pool executor to reuse virtu
 
 
 ```
-try (ExecutorService executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
-   …
+try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
+   System.out.println(executorService);
+
+   Future<String> future = executorService.submit(() -> "omega");
+   future.get();
 }
 ```
 
@@ -180,8 +183,11 @@ The following code correctly uses a _thread-per-task_ virtual thread executor to
 
 
 ```
-try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   …
+try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+   System.out.println(executorService);
+
+   Future<String> future = executorService.submit(() -> "alpha");
+   future.get();
 }
 ```
 
@@ -297,3 +303,45 @@ public void useScopedValue() {
    assertThrows(NoSuchElementException.class, () -> assertNull(scopedValue.get()));
 }
 ```
+
+
+
+### Use synchronized blocks and methods carefully or switch to reentrant locks
+
+To improve scalability when using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-lived pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. As an alternative, you can replace these _synchronized_ blocks and methods with _ReentrantLock_ that also guarantees mutually exclusive access.
+
+The following code uses a _synchronized_ block with an explicit object lock that causes pinning of virtual threads:
+
+
+```
+private final Object lockObject = new Object();
+
+public void useSynchronizedBlock() {
+   synchronized (lockObject) {
+       exclusiveResource();
+   }
+}
+```
+
+
+The following code uses a _ReentrantLock_ that doesn’t cause pinning of virtual threads:
+
+
+```
+private final ReentrantLock reentrantLock = new ReentrantLock();
+
+public void useReentrantLock() {
+   reentrantLock.lock();
+   try {
+       exclusiveResource();
+   } finally {
+       reentrantLock.unlock();
+   }
+}
+```
+
+
+code examples
+
+
+## Conclusion
