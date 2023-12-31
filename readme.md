@@ -345,3 +345,9 @@ code examples
 
 
 ## Conclusion
+
+Dan Kegel’s well-known article [The C10K problem](http://www.kegel.com/c10k.html) about 10,000 concurrent connections in web servers was relevant in 2014. After ten years, a mainstream web server needs to handle 10,000,000 After 10 years, the main web server needs to handle 10 million simultaneous connections.connections. When trying to achieve similar performance in Java virtual machines, it is the threads that are the bottleneck. When a mainstream Java web server stops being unable to handle several thousand concurrent connections, it still has plenty of other available resources: sockets, memory, CPU time.
+
+Using asynchronous solutions such as asynchronous servlet APIs or even reactive web runtimes such as Netty do not solve the problem completely. Such reactive applications work well only when all pipelines from the web server to the storage are reactive and non-blocking. But there are still a lot of synchronous HTTP clients, databases, and message brokers around because such reactive applications are harder to develop, debug, and understand.
+
+Java _virtual threads_ is an attempt to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_ on the same hardware. Considerable work has been done in the Java base library to make the existing threading and I/O classes compatible with virtual threads. In order for your application to benefit from the use of virtual threads, you should follow known guidelines. As the rule of thumbs, to benefit from virtual threads your application must have thousands threads performing intensive blocking I/O operation.
