@@ -1,12 +1,26 @@
 @startuml
 
+skinparam {
+    defaultTextAlignment center
+    roundCorner 0
+    CardBackgroundColor transparent
+    RectangleBackgroundColor transparent
+    RectangleFontName Source Sans Pro
+}
+
 rectangle JMV {
   rectangle JvmThread1
   rectangle JvmThread2
   rectangle JvmThread3
+
+  rectangle JMVScheduler {
+    rectangle CarrierThread1
+    rectangle CarrierThread2
+    rectangle CarrierThread3
+  }
 }
 
-rectangle OS {
+rectangle "Operation system" {
   rectangle OSThread1
   rectangle OSThread2
   rectangle OSThread3
@@ -18,8 +32,12 @@ rectangle OS {
   Scheduler -up- OSThread3
 }
 
-  OSThread1 -up- JvmThread1
-  OSThread2 -up- JvmThread2
-  OSThread3 -up- JvmThread3
+  OSThread1 -up- CarrierThread1
+  OSThread2 -up- CarrierThread2
+  OSThread3 -up- CarrierThread3
+
+  CarrierThread1 -up- JvmThread1
+  CarrierThread2 -up- JvmThread2
+  CarrierThread3 -up- JvmThread3
 
 @enduml
