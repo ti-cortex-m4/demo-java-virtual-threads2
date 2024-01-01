@@ -1,11 +1,25 @@
 @startuml
-!pragma teoz true
-box "component"
-  box "sub1"
-    participant a
-  endbox
-  box "sub2"
-    participant b
-  endbox
-end box
+
+rectangle JMV {
+  rectangle JvmThread1
+  rectangle JvmThread2
+  rectangle JvmThread3
+}
+
+rectangle OS {
+  rectangle OSThread1
+  rectangle OSThread2
+  rectangle OSThread3
+
+  rectangle Scheduler
+
+  Scheduler -up- OSThread1
+  Scheduler -up- OSThread2
+  Scheduler -up- OSThread3
+}
+
+  OSThread1 -up- JvmThread1
+  OSThread2 -up- JvmThread2
+  OSThread3 -up- JvmThread3
+
 @enduml
