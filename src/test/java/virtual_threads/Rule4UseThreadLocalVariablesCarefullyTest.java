@@ -60,6 +60,6 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
             }
         );
 
-        assertThrows(NoSuchElementException.class, () -> assertNull(scopedValue.get()));
+        assertThrows(NoSuchElementException.class, () -> scopedValue.get());
     }
 }
