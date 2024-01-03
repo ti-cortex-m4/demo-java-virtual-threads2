@@ -14,6 +14,10 @@ rectangle JVM {
   rectangle "platform\nthread" as PlatformThread3
   rectangle "platform\nthread" as PlatformThread4
 
+  PlatformThread1 -right[#white]- PlatformThread2
+  PlatformThread2 -right[#white]- PlatformThread3
+  PlatformThread3 -right[#white]- PlatformThread4
+
   rectangle "JMV scheduler" {
     rectangle "сarrier\nthread" as CarrierThread1
     rectangle "сarrier\nthread" as CarrierThread2
