@@ -6,6 +6,7 @@ skinparam {
     CardBackgroundColor transparent
     RectangleBackgroundColor transparent
     RectangleFontName Source Sans Pro
+    RectangleFontStyle normal
 }
 
 rectangle JVM {
@@ -13,14 +14,12 @@ rectangle JVM {
   card "virtual\nthread" as VirtualThread2
   card "virtual\nthread" as VirtualThread3
   card "virtual\nthread" as VirtualThread4
-  card "virtual\nthread" as VirtualThread5
 
   VirtualThread1 -right[hidden]- VirtualThread2
   VirtualThread2 -right[hidden]- VirtualThread3
   VirtualThread3 -right[hidden]- VirtualThread4
-  VirtualThread4 -right[hidden]- VirtualThread5
 
-  rectangle "JMV scheduler" {
+  rectangle "JMV scheduler" #line.dashed {
     card "сarrier\nthread" as CarrierThread1
     card "сarrier\nthread" as CarrierThread2
     card "сarrier\nthread" as CarrierThread3

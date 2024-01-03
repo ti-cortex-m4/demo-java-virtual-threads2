@@ -6,6 +6,7 @@ skinparam {
     CardBackgroundColor transparent
     RectangleBackgroundColor transparent
     RectangleFontName Source Sans Pro
+    RectangleFontStyle normal
 }
 
 rectangle JVM {

@@ -15,6 +15,7 @@ skinparam {
     CardBackgroundColor transparent
     RectangleBackgroundColor transparent
     RectangleFontName Source Sans Pro
+    RectangleFontStyle normal
 }
 
 rectangle "java.lang.Thread" as Thread
