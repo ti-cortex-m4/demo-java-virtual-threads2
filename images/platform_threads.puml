@@ -1,0 +1,27 @@
+@startuml
+
+skinparam {
+    defaultTextAlignment center
+    roundCorner 0
+    CardBackgroundColor transparent
+    RectangleBackgroundColor transparent
+    RectangleFontName Source Sans Pro
+}
+
+rectangle JMV {
+  rectangle JvmThread1
+  rectangle JvmThread2
+  rectangle JvmThread3
+}
+
+rectangle "Operation system" {
+  rectangle "OS thread 1" as OsThread1
+  rectangle "OS thread 2" as OsThread2
+  rectangle "OS thread 3" as OsThread3
+}
+
+OsThread1 -up- JvmThread1
+OsThread2 -up- JvmThread2
+OsThread3 -up- JvmThread3
+
+@enduml
