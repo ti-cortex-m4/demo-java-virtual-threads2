@@ -9,26 +9,26 @@ skinparam {
 }
 
 rectangle JVM {
-  rectangle "platform\nthread" as PlatformThread1
-  rectangle "platform\nthread" as PlatformThread2
-  rectangle "platform\nthread" as PlatformThread3
-  rectangle "platform\nthread" as PlatformThread4
+  card "platform\nthread" as PlatformThread1
+  card "platform\nthread" as PlatformThread2
+  card "platform\nthread" as PlatformThread3
+  card "platform\nthread" as PlatformThread4
 
   PlatformThread1 -right[#white]- PlatformThread2
   PlatformThread2 -right[#white]- PlatformThread3
   PlatformThread3 -right[#white]- PlatformThread4
 
   rectangle "JMV scheduler" {
-    rectangle "сarrier\nthread" as CarrierThread1
-    rectangle "сarrier\nthread" as CarrierThread2
-    rectangle "сarrier\nthread" as CarrierThread3
+    card "сarrier\nthread" as CarrierThread1
+    card "сarrier\nthread" as CarrierThread2
+    card "сarrier\nthread" as CarrierThread3
   }
 }
 
 rectangle "operation system" {
-  rectangle "OS\nthread" as OsThread1
-  rectangle "OS\nthread" as OsThread2
-  rectangle "OS\nthread" as OsThread3
+  card "OS\nthread" as OsThread1
+  card "OS\nthread" as OsThread2
+  card "OS\nthread" as OsThread3
 }
 
 OsThread1 -up- CarrierThread1
