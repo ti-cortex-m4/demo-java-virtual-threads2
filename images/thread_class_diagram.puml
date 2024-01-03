@@ -27,7 +27,7 @@ rectangle "<i>final</i>\njava.lang.VirtualThread" as VirtualThread
 
 Thread -down- SubClass1
 Thread -down- SubClass2
-Thread -down[#transparent]- SubClass3
+Thread -down[hidden]- SubClass3
 Thread -down- SubClassN
 Thread -down- BaseVirtualThread
 BaseVirtualThread -down- VirtualThread

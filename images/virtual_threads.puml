@@ -9,14 +9,16 @@ skinparam {
 }
 
 rectangle JVM {
-  card "platform\nthread" as PlatformThread1
-  card "platform\nthread" as PlatformThread2
-  card "platform\nthread" as PlatformThread3
-  card "platform\nthread" as PlatformThread4
+  card "virtual\nthread" as VirtualThread1
+  card "virtual\nthread" as VirtualThread2
+  card "virtual\nthread" as VirtualThread3
+  card "virtual\nthread" as VirtualThread4
+  card "virtual\nthread" as VirtualThread5
 
-  PlatformThread1 -right[#white]- PlatformThread2
-  PlatformThread2 -right[#white]- PlatformThread3
-  PlatformThread3 -right[#white]- PlatformThread4
+  VirtualThread1 -right[hidden]- VirtualThread2
+  VirtualThread2 -right[hidden]- VirtualThread3
+  VirtualThread3 -right[hidden]- VirtualThread4
+  VirtualThread4 -right[hidden]- VirtualThread5
 
   rectangle "JMV scheduler" {
     card "сarrier\nthread" as CarrierThread1
@@ -35,8 +37,8 @@ OsThread1 -up- CarrierThread1
 OsThread2 -up- CarrierThread2
 OsThread3 -up- CarrierThread3
 
-CarrierThread1 -up- PlatformThread1
-CarrierThread2 -up- PlatformThread2
-CarrierThread3 -up- PlatformThread3
+CarrierThread1 -up- VirtualThread1
+CarrierThread2 -up- VirtualThread2
+CarrierThread3 -up- VirtualThread3
 
 @enduml
