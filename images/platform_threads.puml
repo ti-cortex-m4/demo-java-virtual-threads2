@@ -8,7 +8,7 @@ skinparam {
     RectangleFontName Source Sans Pro
 }
 
-rectangle JMV {
+rectangle JVM {
   rectangle "plarform thread 1" as PlatformThread1
   rectangle "plarform thread 2" as PlatformThread2
   rectangle "plarform thread 3" as PlatformThread3

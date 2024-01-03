@@ -8,36 +8,30 @@ skinparam {
     RectangleFontName Source Sans Pro
 }
 
-rectangle JMV {
-  rectangle JvmThread1
-  rectangle JvmThread2
-  rectangle JvmThread3
+rectangle JVM {
+  rectangle PlatformThread1
+  rectangle PlatformThread2
+  rectangle PlatformThread3
 
-  rectangle JMVScheduler {
-    rectangle CarrierThread1
-    rectangle CarrierThread2
-    rectangle CarrierThread3
+  rectangle "JMV scheduler" {
+    rectangle "сarrier\nthread" as CarrierThread1
+    rectangle "сarrier\nthread" as CarrierThread2
+    rectangle "сarrier\nthread" as CarrierThread3
   }
 }
 
 rectangle "Operation system" {
-  rectangle OSThread1
-  rectangle OSThread2
-  rectangle OSThread3
-
-  rectangle Scheduler
-
-  Scheduler -up- OSThread1
-  Scheduler -up- OSThread2
-  Scheduler -up- OSThread3
+  rectangle "OS thread" as OsThread1
+  rectangle "OS thread" as OsThread2
+  rectangle "OS thread" as OsThread3
 }
 
-  OSThread1 -up- CarrierThread1
-  OSThread2 -up- CarrierThread2
-  OSThread3 -up- CarrierThread3
+OsThread1 -up- CarrierThread1
+OsThread2 -up- CarrierThread2
+OsThread3 -up- CarrierThread3
 
-  CarrierThread1 -up- JvmThread1
-  CarrierThread2 -up- JvmThread2
-  CarrierThread3 -up- JvmThread3
+CarrierThread1 -up- PlatformThread1
+CarrierThread2 -up- PlatformThread2
+CarrierThread3 -up- PlatformThread3
 
 @enduml
