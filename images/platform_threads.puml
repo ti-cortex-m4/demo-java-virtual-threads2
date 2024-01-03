@@ -1,6 +1,7 @@
 @startuml
 
 skinparam {
+    linetype ortho
     defaultTextAlignment center
     roundCorner 0
     CardBackgroundColor transparent
