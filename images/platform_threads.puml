@@ -9,15 +9,15 @@ skinparam {
 }
 
 rectangle JVM {
-  rectangle "plarform thread 1" as PlatformThread1
-  rectangle "plarform thread 2" as PlatformThread2
-  rectangle "plarform thread 3" as PlatformThread3
+  rectangle "plarform\nthread" as PlatformThread1
+  rectangle "plarform\nthread" as PlatformThread2
+  rectangle "plarform\nthread" as PlatformThread3
 }
 
-rectangle "Operation system" {
-  rectangle "OS thread 1" as OsThread1
-  rectangle "OS thread 2" as OsThread2
-  rectangle "OS thread 3" as OsThread3
+rectangle "operation system" {
+  rectangle "OS\nthread" as OsThread1
+  rectangle "OS\nthread" as OsThread2
+  rectangle "OS\nthread" as OsThread3
 }
 
 OsThread1 -up- PlatformThread1
