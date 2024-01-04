@@ -40,7 +40,7 @@ public class Rule1WriteBlockingSynchronousCodeTest {
 
     @Test
     public void blockingAsynchronousCodeTest() throws InterruptedException, ExecutionException {
-        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+        try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             long startMillis = System.currentTimeMillis();
 
             Future<Integer> priceInEur = executorService.submit(this::readPriceInEur);
