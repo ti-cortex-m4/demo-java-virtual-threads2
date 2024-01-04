@@ -1,0 +1,28 @@
+@startuml
+
+title Platform threads
+
+scale 1.1
+hide footbox
+skinparam monochrome true
+skinparam defaultFontName Source Sans Pro
+skinparam titleFontSize 15
+skinparam sequenceMessageAlign left
+skinparam participantBackgroundColor #white
+skinparam noteBackgroundColor #white
+skinparam sequenceGroupBackgroundColor #white
+
+participant "platform\nthread1" as PlatformThread1
+participant "platform\nthread2" as PlatformThread2
+participant "service" as Service
+
+||10||
+activate PlatformThread1
+PlatformThread1->>Service
+||10||
+activate PlatformThread2
+PlatformThread2->>Service
+Service->>PlatformThread1
+Service->>PlatformThread2
+
+@enduml
