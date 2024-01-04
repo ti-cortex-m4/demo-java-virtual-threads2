@@ -1,11 +1,16 @@
 @startuml
-scale 1.1
+
 title I/O multiplexing model
+
+scale 1.1
 hide footbox
 skinparam monochrome true
 skinparam defaultFontName Source Sans Pro
 skinparam titleFontSize 15
-skinparam sequenceMessageAlign center
+skinparam sequenceMessageAlign left
+skinparam participantBackgroundColor #white
+skinparam noteBackgroundColor #white
+skinparam sequenceGroupBackgroundColor #white
 
 activate application
 application->>kernel: monitoring\ndescriptors
