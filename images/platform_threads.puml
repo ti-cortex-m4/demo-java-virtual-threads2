@@ -7,22 +7,28 @@ hide footbox
 skinparam monochrome true
 skinparam defaultFontName Source Sans Pro
 skinparam titleFontSize 15
+skinparam titleFontStyle normal
 skinparam sequenceMessageAlign left
 skinparam participantBackgroundColor #white
 skinparam noteBackgroundColor #white
 skinparam sequenceGroupBackgroundColor #white
 
 participant "platform\nthread 1" as PlatformThread1
-participant "platform\nthread 2" as PlatformThread2
+'participant "platform\nthread 2" as PlatformThread2
 participant "service" as Service
 
 ||10||
 activate PlatformThread1
 PlatformThread1->>Service
-||10||
-activate PlatformThread2
-PlatformThread2->>Service
+deactivate PlatformThread1
+activate Service
+||100||
+'activate PlatformThread2
+'PlatformThread2->>Service
 Service->>PlatformThread1
-Service->>PlatformThread2
+deactivate Service
+activate PlatformThread1
+'Service->>PlatformThread2
+||10||
 
 @enduml
