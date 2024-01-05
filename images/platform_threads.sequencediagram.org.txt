@@ -1,0 +1,14 @@
+title Platform threads
+
+[->>PlatformThread1: request 1
+activate PlatformThread1
+PlatformThread1->>Service:
+activate Service
+deactivate PlatformThread1
+activate PlatformThread1 #gray
+Service->>PlatformThread1:
+deactivate PlatformThread1
+activate PlatformThread1
+deactivate Service
+PlatformThread1->>[: response 1
+deactivate PlatformThread1
