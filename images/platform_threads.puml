@@ -24,10 +24,10 @@ participant "service" as Service
 ->> PlatformThread1
 activate PlatformThread1
 PlatformThread1->>Service
-deactivate PlatformThread1
-& <<-- PlatformThread1
-activate PlatformThread1 #gray
 activate Service
+deactivate PlatformThread1
+& <<-[hidden]- PlatformThread1
+activate PlatformThread1 #gray
 
 '->> PlatformThread2
 'activate PlatformThread2
@@ -39,9 +39,9 @@ activate Service
 ||60||
 
 Service->>PlatformThread1
-'deactivate Service
+deactivate Service
 deactivate PlatformThread1
-& <<-- PlatformThread1
+& <<-[hidden]- PlatformThread1
 activate PlatformThread1
 <<- PlatformThread1
 deactivate PlatformThread1
