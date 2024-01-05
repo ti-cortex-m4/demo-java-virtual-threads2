@@ -141,7 +141,7 @@ CompletableFuture.supplyAsync(this::getPriceInEur)
 ```
 
 
-The following blocking synchronous code will benefit from using virtual threads because the much simpler code shows the same duration as the previous complex one:
+The following blocking synchronous code will benefit from using virtual threads because the much simpler code that returns the same value for the same duration as the previous complex one:
 
 
 ```
@@ -165,19 +165,19 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
 
 ### Do not pool virtual threads
 
-Creating a platform thread is a rather time-consuming process, as it requires the creation of an OS thread. Thread pool executors are designed to reuse threads between tasks and reduce this time. They contain a pool of pre-created worker threads to which _Runnable_ and _Callable_ tasks are passed through a _BlockingQueue_ instance. A worker thread is not destroyed after executing one task but is used to execute the next task read from the task queue.
+Creating a platform thread is a rather time-consuming process because it requires the creation of an OS thread. Thread pool executors are designed to reduce this time by reusing threads between task executions. They contain a pool of pre-created worker threads to _Runnable_ and _Callable_ tasks are passed through a blocking queue.
 
-Unlike platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the program logic requires the use of an _ExecutorService_ instance, use an executor specially designed for virtual threads, created in the static factory method _Executors.newVirtualThreadPerTaskExecutor_. This executor does not use a thread pool and creates a new virtual thread for each submitted task. Moreover, this executor itself is lightweight, and you can create and close it at any desired location within the _try-with-resources_ block.
+Unlike creating platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the program logic requires the use of an _ExecutorService_ instance, use a specially designed implementation for virtual threads, created in the static factory method _Executors.newVirtualThreadPerTaskExecutor()_. This executor does not use a thread pool and creates a new virtual thread for each submitted task. In addition, this executor is lightweight and you can create and close it at any desired code within the _try-with-resources_ block.
 
 The following code incorrectly uses a cached thread pool executor to reuse virtual threads between tasks:
 
 
 ```
 try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
-   System.out.println(executorService);
-
-   Future<String> future = executorService.submit(() -> "omega");
-   future.get();
+   executorService.submit(() -> {
+       sleep(1000);
+       System.out.println("omega");
+   });
 }
 ```
 
@@ -187,10 +187,10 @@ The following code correctly uses a _thread-per-task_ virtual thread executor to
 
 ```
 try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   System.out.println(executorService);
-
-   Future<String> future = executorService.submit(() -> "alpha");
-   future.get();
+   executorService.submit(() -> {
+       sleep(1000);
+       System.out.println("alpha");
+   });
 }
 ```
 
@@ -198,9 +198,9 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
 
 ### Use semaphores instead of fixed thread pools to limit concurrency
 
-The main objective of thread pools is to reuse threads when executing many tasks. When tasks are submitted to a thread pool, they are placed in a task queue from which they are retrieved by worker threads for execution (see _ThreadPoolExecutor#workQueue_). An additional objective in using thread pools wi_th a fixed number of worker threads_ is that they can be used to limit the concurrency of a particular operation (for example, an external resource cannot handle more than N concurrent requests).
+The main purpose of thread pools is to reuse threads between executing multiple tasks. When tasks are submitted to a thread pool, they are placed in a task queue from which they are retrieved by worker threads for execution. An additional purpose of using thread pools with a _fixed number of worker threads_ can be to limit the concurrency of a particular operation. They can be used in a situation when an external resource cannot process more than a predefined number of concurrent requests.
 
-However, since there is no need to reuse virtual threads, there is no need to use thread pools with a fixed number of worker threads. Instead, it is better to use semaphores with the same number of permissions to limit concurrency. A semaphore also contains a queue inside it, not of tasks, but of threads blocked on it (see _AbstractQueuedSynchronizer#head_). So this replacement is quite functionally equivalent.
+However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, it is better to use semaphores with the same number of permits to limit concurrency. A semaphore also contains a queue inside itself but not of tasks but of threads blocked on it. So this replacement is functionally equivalent.
 
 The following code, which uses a fixed pool of threads to limit concurrency when accessing some shared resource, will not benefit from the use of virtual threads:
 
@@ -209,7 +209,7 @@ The following code, which uses a fixed pool of threads to limit concurrency when
 private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
 public Object useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
-   Future<Object> future = executorService.submit(() -> sharedResource());
+   Future<Object> future = executorService.submit(this::sharedResource());
    return future.get();
 }
 ```
@@ -235,17 +235,17 @@ public Object useSemaphoreToLimitConcurrency() throws InterruptedException {
 
 ### Use thread-local variables carefully or switch to scoped values
 
-To achieve better scalability of virtual threads, you should reconsider using _thread-local variables_ and _inheritable-thread-local variables_. Thread-local variables provide each thread with its copy of a variable that is set to a value that is independent of the value set by other threads. A thread-local variable works as an implicit, thread-bound parameter and allows passing data from a caller to a callee through a sequence of intermediate methods.
+To achieve better scalability of virtual threads, you should reconsider using _thread-local variables_ and _inheritable-thread-local variables_. Thread-local variables provide each thread with its own copy of a variable, which is set to a value that is independent of the values set by other threads. A thread-local variable works as an implicit, thread-bound parameter and allows passing data from a caller to a callee through a sequence of intermediate methods.
 
-Virtual threads support thread-local behavior in the same way as platform threads. But because virtual threads can be very numerous, negative design features of local variables can be applied much more significantly:
+Virtual threads support thread-local behavior in the same way as platform threads. But because virtual threads can be very numerous, negative design features of thread-local variables can be applied much more significantly:
 
 
 
-* _unconstrained mutability_ (any code that can call the get method of a thread-local variable can call the set method of that variable, even if an object in a thread-local variable is immutable)
-* _unbounded lifetime_ (once a copy of a thread-local variable is set via the set method, the value is retained for the lifetime of the thread, or until code in the thread calls the remove method)
-* _expensive inheritance_ (each child thread copies, not reuses, inheritable-thread-local variables of a parent thread)
+* _unconstrained mutability_ (any code that can call the _get_ method of a thread-local variable can call the _set_ method of that variable, even if an object in a thread-local variable is immutable)
+* _unbounded lifetime_ (once a copy of a thread-local variable is set via the _set_ method, the value is retained for the lifetime of the thread, or until code in the thread calls the _remove_ method)
+* _expensive inheritance_ (each child thread copies, not reuses, _inheritable-thread-local variables_ of the parent thread)
 
-_Scoped values_ may be a better alternative to thread-local variables, especially when using large numbers of virtual threads. Unlike a thread-local variable, a scoped value is written once, is available only for a bounded context, and is inherited in a _structured concurrency_ scope.
+Getting rid of thread-local variables can be a challenge. In some cases, _scoped values_ may be a better alternative to thread-local variables, especially when using large numbers of virtual threads. Unlike a thread-local variable, a scoped value is written once, is available only for a bounded context, and is inherited in a _structured concurrency_ scope.
 
 <sub>Scoped values are a preview feature in Java 20 and have not been released at the time of writing.</sub>
 
@@ -303,7 +303,7 @@ public void useScopedValue() {
        }
    );
 
-   assertThrows(NoSuchElementException.class, () -> scopedValue.get());
+   assertThrows(NoSuchElementException.class, scopedValue::get);
 }
 ```
 
@@ -311,7 +311,7 @@ public void useScopedValue() {
 
 ### Use synchronized blocks and methods carefully or switch to reentrant locks
 
-To improve scalability when using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-lived pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. As an alternative, you can replace these _synchronized_ blocks and methods with _ReentrantLock_ which also guarantees mutually exclusive access.
+To improve scalability when using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. As an alternative, you can replace these _synchronized_ blocks and methods with _ReentrantLock_ which also guarantees mutually exclusive access.
 
 <sub>To identify pinning, you can use the JVM flag <em>-Djdk.tracePinnedThreads=full</em> when executing your application.</sub>
 
@@ -329,7 +329,7 @@ public void useSynchronizedBlock() {
 ```
 
 
-The following code uses a _ReentrantLock_ that doesn’t cause pinning of virtual threads:
+The following code uses a _ReentrantLock_ that does not cause pinning of virtual threads:
 
 
 ```
