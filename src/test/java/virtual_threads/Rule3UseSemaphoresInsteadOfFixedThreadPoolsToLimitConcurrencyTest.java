@@ -11,7 +11,7 @@ public class Rule3UseSemaphoresInsteadOfFixedThreadPoolsToLimitConcurrencyTest {
     private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
     public String useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
-        Future<String> future = executorService.submit(() -> sharedResource());
+        Future<String> future = executorService.submit(this::sharedResource);
         return future.get();
     }
 
