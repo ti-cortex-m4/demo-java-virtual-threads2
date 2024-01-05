@@ -12,13 +12,22 @@ skinparam participantBackgroundColor #white
 skinparam noteBackgroundColor #white
 skinparam sequenceGroupBackgroundColor #white
 
-activate HW
-rnote over HW : Fill buffer 0
-HW -> IRQ
-deactivate HW
-IRQ -[hidden]> HW
-activate HW
-rnote over HW : Fill buffer 1
-HW -> IRQ
-deactivate HW
+activate application
+application->>kernel: monitoring\ndescriptors
+deactivate application
+activate kernel
+Note right of kernel: wait for data\nin at least one\ndescriptor
+kernel-->>application: readable\ndescriptors
+deactivate kernel
+activate application
+application->>kernel: reading data
+deactivate application
+activate kernel
+Note right of kernel: copy data
+kernel-->>application: data
+deactivate kernel
+activate application
+
+||11||
+kernel -[#white]->]
 @enduml
