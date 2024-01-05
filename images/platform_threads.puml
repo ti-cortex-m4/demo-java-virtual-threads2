@@ -12,8 +12,8 @@ skinparam participantBackgroundColor #white
 skinparam noteBackgroundColor #white
 skinparam sequenceGroupBackgroundColor #white
 
-participant "platform\nthread1" as PlatformThread1
-participant "platform\nthread2" as PlatformThread2
+participant "platform\nthread 1" as PlatformThread1
+participant "platform\nthread 2" as PlatformThread2
 participant "service" as Service
 
 ||10||
