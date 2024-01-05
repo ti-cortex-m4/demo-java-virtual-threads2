@@ -1,4 +1,4 @@
-package virtual_threads;//import static org.junit.jupiter.api.Assertions.assertEquals;
+package virtual_threads.part1;//import static org.junit.jupiter.api.Assertions.assertEquals;
 //import static org.junit.jupiter.api.Assertions.assertNull;
 //import static org.junit.jupiter.api.Assertions.assertThrows;
 //import static org.junit.jupiter.api.Assertions.assertTrue;

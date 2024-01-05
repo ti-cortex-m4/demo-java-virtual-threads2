@@ -1,4 +1,4 @@
-package virtual_threads;
+package virtual_threads.part2;
 
 import java.util.concurrent.locks.ReentrantLock;
 

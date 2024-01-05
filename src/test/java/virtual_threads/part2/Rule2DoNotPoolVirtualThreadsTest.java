@@ -1,6 +1,7 @@
-package virtual_threads;
+package virtual_threads.part2;
 
 import org.junit.jupiter.api.Test;
+import virtual_threads.AbstractTest;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;

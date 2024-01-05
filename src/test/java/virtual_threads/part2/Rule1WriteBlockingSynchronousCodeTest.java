@@ -1,4 +1,4 @@
-package virtual_threads;
+package virtual_threads.part2;
 
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
