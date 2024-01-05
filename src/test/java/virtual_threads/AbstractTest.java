@@ -2,7 +2,7 @@ package virtual_threads;
 
 import java.util.concurrent.TimeUnit;
 
-class AbstractTest {
+public class AbstractTest {
 
     protected void sleep(int milliseconds) {
         try {
@@ -10,5 +10,9 @@ class AbstractTest {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    protected void sleep() {
+        sleep(1000);
     }
 }
