@@ -1,5 +1,7 @@
 @startuml
 
+!pragma teoz true
+
 title Platform threads
 
 scale 1.1
@@ -23,26 +25,32 @@ participant "service" as Service
 activate PlatformThread1
 PlatformThread1->>Service
 deactivate PlatformThread1
+<-[hidden]- PlatformThread1
+activate PlatformThread1 #gray
 activate Service
 
 ->> PlatformThread2
 activate PlatformThread2
 PlatformThread2->>Service
 deactivate PlatformThread2
-'activate Service
+<-[hidden]- PlatformThread2
+activate PlatformThread2 #gray
 
 ||60||
 
 Service->>PlatformThread1
 'deactivate Service
+deactivate PlatformThread1
+<-[hidden]- PlatformThread1
 activate PlatformThread1
 <<- PlatformThread1
 deactivate PlatformThread1
 
 Service->>PlatformThread2
 deactivate Service
+deactivate PlatformThread2
+<-[hidden]- PlatformThread2
 activate PlatformThread2
-
 <<- PlatformThread2
 deactivate PlatformThread2
 
