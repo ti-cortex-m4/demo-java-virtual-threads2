@@ -1,6 +1,6 @@
 @startuml
 
-!pragma teoz true
+'!pragma teoz true
 
 title Platform threads
 
@@ -21,13 +21,13 @@ participant "service" as Service
 
 ||10||
 
-->> PlatformThread1
-activate PlatformThread1
-PlatformThread1->>Service
-activate Service
-deactivate PlatformThread1
-& <<-[hidden]- PlatformThread1
-activate PlatformThread1 #gray
+->> PlatformThread1 ++
+'activate PlatformThread1
+& PlatformThread1->>Service --++
+'activate Service
+'deactivate PlatformThread1
+& <<-- PlatformThread1
+'activate PlatformThread1 #gray
 
 '->> PlatformThread2
 'activate PlatformThread2
@@ -38,13 +38,13 @@ activate PlatformThread1 #gray
 
 ||60||
 
-Service->>PlatformThread1
-deactivate Service
-deactivate PlatformThread1
-& <<-[hidden]- PlatformThread1
-activate PlatformThread1
-<<- PlatformThread1
-deactivate PlatformThread1
+Service->>PlatformThread1 --++
+'deactivate Service
+'deactivate PlatformThread1
+'& <<-[hidden]- PlatformThread1
+'activate PlatformThread1
+'<<- PlatformThread1
+'deactivate PlatformThread1
 
 'Service->>PlatformThread2
 'deactivate Service
