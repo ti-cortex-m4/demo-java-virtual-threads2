@@ -1,29 +1,67 @@
 @startuml
 
-skinparam {
-'    linetype ortho
-    defaultTextAlignment center
-    roundCorner 0
-    CardBackgroundColor transparent
-    RectangleBackgroundColor transparent
-    RectangleFontName Source Sans Pro
-    RectangleFontStyle normal
-}
+title platform threads
 
-rectangle JVM {
-  card "plarform\nthread" as PlatformThread1
-  card "plarform\nthread" as PlatformThread2
-  card "plarform\nthread" as PlatformThread3
-}
+scale 1.0
+hide footbox
+!pragma teoz true
 
-rectangle "operation system" {
-  card "OS\nthread" as OsThread1
-  card "OS\nthread" as OsThread2
-  card "OS\nthread" as OsThread3
-}
+skinparam monochrome true
+skinparam defaultFontName Source Sans Pro
+skinparam titleFontSize 15
+skinparam titleFontStyle normal
+skinparam sequenceMessageAlign left
+skinparam participantBackgroundColor #white
+skinparam noteBackgroundColor #white
+skinparam sequenceGroupBackgroundColor #white
 
-OsThread1 -up- PlatformThread1
-OsThread2 -up- PlatformThread2
-OsThread3 -up- PlatformThread3
+participant "platform\nthread 1" as PlatformThread1
+participant "platform\nthread 2" as PlatformThread2
+participant "operation\nsystem I/O" as Service
+
+->> PlatformThread1: request 1
+activate PlatformThread1
+PlatformThread1->>Service
+activate Service
+
+->> PlatformThread2: request 2
+activate PlatformThread2
+PlatformThread2->>Service
+activate Service
+
+'->> PlatformThread2
+'activate PlatformThread2
+'PlatformThread2->>Service
+'deactivate PlatformThread2
+'<-[hidden]- PlatformThread2
+'activate PlatformThread2 #gray
+
+||80||
+
+Service->>PlatformThread1
+deactivate Service
+<<- PlatformThread1: response 1
+deactivate PlatformThread1
+
+Service->>PlatformThread2
+deactivate Service
+<<- PlatformThread2: response 2
+deactivate PlatformThread2
+
+'deactivate PlatformThread1
+'deactivate PlatformThread1
+'& <<-- PlatformThread1
+'activate PlatformThread1
+
+
+'Service->>PlatformThread2
+'deactivate Service
+'deactivate PlatformThread2
+'<-[hidden]- PlatformThread2
+'activate PlatformThread2
+'<<- PlatformThread2
+'deactivate PlatformThread2
+
+||10||
 
 @enduml

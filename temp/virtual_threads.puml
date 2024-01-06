@@ -1,44 +1,47 @@
 @startuml
 
-skinparam {
-'    linetype ortho
-    defaultTextAlignment center
-    roundCorner 0
-    CardBackgroundColor transparent
-    RectangleBackgroundColor transparent
-    RectangleFontName Source Sans Pro
-    RectangleFontStyle normal
-}
+title virtual threads
 
-rectangle JVM {
-  card "virtual\nthread" as VirtualThread1
-  card "virtual\nthread" as VirtualThread2
-  card "virtual\nthread" as VirtualThread3
-  card "virtual\nthread" as VirtualThread4
+scale 1.0
+hide footbox
+!pragma teoz true
 
-  VirtualThread1 -right[hidden]- VirtualThread2
-  VirtualThread2 -right[hidden]- VirtualThread3
-  VirtualThread3 -right[hidden]- VirtualThread4
+skinparam monochrome true
+skinparam defaultFontName Source Sans Pro
+skinparam titleFontSize 15
+skinparam titleFontStyle normal
+skinparam sequenceMessageAlign left
+skinparam participantBackgroundColor #white
+skinparam noteBackgroundColor #white
+skinparam sequenceGroupBackgroundColor #white
 
-  rectangle "JMV scheduler" #line.dashed {
-    card "сarrier\nthread" as CarrierThread1
-    card "сarrier\nthread" as CarrierThread2
-    card "сarrier\nthread" as CarrierThread3
-  }
-}
+participant "virtual\nthread 1" as VirtualThread1
+participant "virtual\nthread 2" as VirtualThread2
+participant "carrier\nthread" as CarrierThread
+participant "operation\nsystem I/O" as Service
 
-rectangle "operation system" {
-  card "OS\nthread" as OsThread1
-  card "OS\nthread" as OsThread2
-  card "OS\nthread" as OsThread3
-}
+->> VirtualThread1: request 1
+activate VirtualThread1
+activate CarrierThread
+VirtualThread1->>Service
+activate Service
 
-OsThread1 -up- CarrierThread1
-OsThread2 -up- CarrierThread2
-OsThread3 -up- CarrierThread3
+->> VirtualThread2: request 2
+activate VirtualThread2
+VirtualThread2->>Service
+activate Service
 
-CarrierThread1 -up- VirtualThread1
-CarrierThread2 -up- VirtualThread2
-CarrierThread3 -up- VirtualThread3
+||80||
+
+Service->>VirtualThread1
+deactivate Service
+<<- VirtualThread1: response 1
+deactivate VirtualThread1
+
+Service->>VirtualThread2
+deactivate Service
+<<- VirtualThread2: response 2
+deactivate CarrierThread
+deactivate VirtualThread2
 
 @enduml
