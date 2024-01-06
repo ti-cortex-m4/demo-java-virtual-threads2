@@ -5,23 +5,23 @@
 
 Java _virtual threads_ are lightweight threads designed to develop _high-throughput_ concurrent applications. Pre-existing Java threads were based on operating system (OS) threads, which proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the JVM cannot efficiently handle more than a few thousand threads.
 
-If programmers continue to use threads as the concurrent model, they will severely limit the performance of their applications. Alternatively, they can switch to other concurrent models (for example, callbacks, [futures](https://github.com/aliakh/demo-java-completablefuture/blob/master/readme.md), or reactive streams) that do not block threads. Such solutions, although they show much better performance, are much more difficult to write, debug, and understand.
+If programmers continue to use threads as the concurrent model, they will severely limit the performance of their applications. Alternatively, they can switch to other concurrent models (for example, callbacks, [futures](https://github.com/aliakh/demo-java-completablefuture/blob/master/readme.md), or reactive streams) that do not block threads. Such solutions, while showing much better performance, are much more difficult to write, debug, and understand.
 
-The purpose of virtual threads is to add lightweight, user-space threads managed by the JVM, which would be used alongside the existing heavyweight, kernel-space threads managed by the OS. Programmers can create millions of virtual threads and get much better throughput using much simpler synchronous blocking code.
+The purpose of virtual threads is to add lightweight, user-space threads managed by the JVM to be used alongside the existing heavyweight, kernel-space threads managed by the OS. Programmers can create millions of virtual threads and get much better throughput using much simpler synchronous blocking code.
 
 <sub>Virtual threads were added in Java 19 as a preview feature and released in Java 21.</sub>
 
 
 ## Platform threads and virtual threads
 
-A thread is a _thread of execution_ in a program, that is the independently scheduled execution units that belong to a process in the OS. This entity has a program counter and stack. The _Thread_ class is a facade to manage _threads of execution_ in the JVM. This class has fields, methods, and constructors. There are two kinds of threads, platform threads and virtual threads.
+A thread is a _thread of execution_ in a program, that is an independently scheduled execution unit that belongs to a process in the OS. This entity has a program counter and stack. The _Thread_ class is a facade to manage _threads of execution_ in the JVM. This class has fields, methods, and constructors. There are two kinds of threads, platform threads and virtual threads.
 
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and hence, platform threads. Creating an OS thread is quite a time-consuming action (~1 ms), and _context switching_ of an OS thread is even longer (~100 ms). Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For a JVM running on Linux x64, the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplistically, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. Creating an OS thread is quite a time-consuming action (~1 ms), and _context switching_ of an OS thread is even longer (~100 ms). Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplified, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
 
->Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
+>Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of the limited resource.
 
 
 ### Virtual threads
@@ -105,8 +105,6 @@ try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor
 ```
 
 
-code examples
-
 
 ## How to properly use virtual threads
 
@@ -130,7 +128,7 @@ CompletableFuture.supplyAsync(this::getPriceInEur)
    .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) 
    .whenComplete((grossAmountInUsd, t) -> { 
        if (t == null) {
-           assertEquals(165, grossAmountInUsd);
+           assertEquals(108, grossAmountInUsd);
        } else {
            fail(t);
        }
@@ -152,7 +150,7 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
        Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
        float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
 
-       assertEquals(165, grossAmountInUsd);
+       assertEquals(108, grossAmountInUsd);
    } catch (Exception e) {
        fail(e);
    }
@@ -337,8 +335,6 @@ public String useReentrantLockForExclusiveAccess() {
 }
 ```
 
-
-code examples
 
 
 ## Conclusion
