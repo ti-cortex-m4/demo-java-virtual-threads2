@@ -1,6 +1,6 @@
 @startuml
 
-title Platform threads
+title platform threads
 
 scale 1.0
 hide footbox
