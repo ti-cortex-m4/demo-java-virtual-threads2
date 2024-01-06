@@ -21,13 +21,14 @@ participant "service" as Service
 
 ||10||
 
-->> PlatformThread1 ++
-'activate PlatformThread1
-& PlatformThread1->>Service --++
+->> PlatformThread1: request 1
+activate PlatformThread1
+PlatformThread1->>Service
 'activate Service
-'deactivate PlatformThread1
-& <<-- PlatformThread1
-'activate PlatformThread1 #gray
+
+->> PlatformThread2: request 2
+activate PlatformThread2
+PlatformThread2->>Service
 
 '->> PlatformThread2
 'activate PlatformThread2
@@ -36,15 +37,23 @@ participant "service" as Service
 '<-[hidden]- PlatformThread2
 'activate PlatformThread2 #gray
 
-||60||
+||80||
 
-Service->>PlatformThread1 --++
+Service->>PlatformThread1
 'deactivate Service
+<<- PlatformThread1: response 1
+deactivate PlatformThread1
+
+Service->>PlatformThread2
+'deactivate Service
+<<- PlatformThread2: response 2
+deactivate PlatformThread2
+
 'deactivate PlatformThread1
-'& <<-[hidden]- PlatformThread1
+'deactivate PlatformThread1
+'& <<-- PlatformThread1
 'activate PlatformThread1
-'<<- PlatformThread1
-'deactivate PlatformThread1
+
 
 'Service->>PlatformThread2
 'deactivate Service
