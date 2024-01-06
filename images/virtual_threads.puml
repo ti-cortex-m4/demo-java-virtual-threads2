@@ -1,6 +1,6 @@
 @startuml
 
-title platform threads
+title virtual threads
 
 scale 1.0
 hide footbox
@@ -15,8 +15,33 @@ skinparam participantBackgroundColor #white
 skinparam noteBackgroundColor #white
 skinparam sequenceGroupBackgroundColor #white
 
-participant "platform\nthread 1" as PlatformThread1
-participant "platform\nthread 2" as PlatformThread2
+participant "virtual\nthread 1" as VirtualThread1
+participant "virtual\nthread 2" as VirtualThread2
+participant "carrier\nthread" as CarrierThread
 participant "operation\nsystem I/O" as Service
+
+->> VirtualThread1: request 1
+activate VirtualThread1
+activate CarrierThread
+VirtualThread1->>Service
+activate Service
+
+->> VirtualThread2: request 2
+activate VirtualThread2
+VirtualThread2->>Service
+activate Service
+
+||80||
+
+Service->>VirtualThread1
+deactivate Service
+<<- VirtualThread1: response 1
+deactivate VirtualThread1
+
+Service->>VirtualThread2
+deactivate Service
+<<- VirtualThread2: response 2
+deactivate CarrierThread
+deactivate VirtualThread2
 
 @enduml
