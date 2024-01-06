@@ -14,30 +14,30 @@ The purpose of virtual threads is to add lightweight, user-space threads managed
 
 ## Platform threads and virtual threads
 
-A thread is a _thread of execution_ in a program, that is the independently scheduled execution units that belong to a process. This entity has a program counter and stack. The _Thread_ class is a facade to manage _threads of execution_ in the JVM. This class has fields, methods, and constructors. There are two kinds of threads, platform threads and virtual threads.
+A thread is a _thread of execution_ in a program, that is the independently scheduled execution units that belong to a process in the OS. This entity has a program counter and stack. The _Thread_ class is a facade to manage _threads of execution_ in the JVM. This class has fields, methods, and constructors. There are two kinds of threads, platform threads and virtual threads.
 
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and hence, platform threads. Creating an OS thread is quite a time-consuming action. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For a JVM running on Linux x64, the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplistically, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and hence, platform threads. Creating an OS thread is quite a time-consuming action (~1 ms), and _context switching_ of an OS thread is even longer (~100 ms). Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For a JVM running on Linux x64, the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplistically, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
 
 >Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
 
 ### Virtual threads
 
-_Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ OS threads. Virtual threads are scheduled by the JVM, rather than the OS. The stack size of virtual threads is much smaller than for platform threads and is dynamically-sized. Thus, the number of virtual threads does not depend on the limitations of the OS. A typical JVM can support millions of virtual threads.
+_Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ OS threads. Virtual threads are scheduled by the JVM, rather than the OS. The stack size of virtual threads is much smaller than for platform threads and is dynamically sized. Thus, the number of virtual threads does not depend on the limitations of the OS. A typical JVM can support millions of virtual threads.
 
 >Virtual threads are suitable for executing tasks that spend most of the time blocked and are not intended for long-running CPU-intensive operations.
 
 
 ### Carrier threads
 
-Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the JVM scheduler, a special _ForkJoinPool_ executor. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the I/O operations in the Java core library have been refactored to make them non-blocking. When a virtual thread is blocked on an I/O operation, the JVM scheduler dispatches the I/O operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking I/O from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the I/O operation completes, the JVM scheduler mounts the virtual thread to an available carrier thread.
+Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the JVM scheduler, a special _ForkJoinPool_ executor. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library have been refactored to make them non-blocking. When a virtual thread is blocked on an I/O operation, the JVM scheduler dispatches the I/O operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking I/O from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the I/O operation completes, the JVM scheduler mounts the virtual thread to an available carrier thread.
 
 <sub>The stack of the virtual thread is copied from the heap to the stack of the carrier thread during mounting and is moved back to the heap during the unmounting.</sub>
 
-However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a platform thread to the JVM scheduler.
+However, some operations in the Java core library do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a platform thread to the JVM scheduler.
 
 A virtual thread also cannot be unmounted during blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a _native method,_ or a _foreign function_. During pinning, the JVM scheduler does not create an additional carrier thread, so frequent and long-lived pinning may worsen the scalability of the application.
 
@@ -83,7 +83,7 @@ thread.join();
 ```
 
 
-The _thread factory_ allows you to create virtual threads by specifying a _Runnable_ task to the instance of the _ThreadFactory_ interface. The parameters of virtual threads are determined by the current state of the thread builder from which this factor is created. (Note that the thread factory is thread-safe, but the thread builder is not).
+The _thread factory_ allows you to create virtual threads by specifying a _Runnable_ task to the instance of the _ThreadFactory_ interface. The parameters of virtual threads are specified by the current state of the thread builder from which this factor is created. (Note that the thread factory is thread-safe, but the thread builder is not).
 
 
 ```
@@ -167,7 +167,7 @@ Creating a platform thread is a rather time-consuming process because it require
 
 Unlike creating platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the program requires an _ExecutorService_ instance, use a specially designed implementation for virtual threads, created in the static factory method _Executors.newVirtualThreadPerTaskExecutor()_. This executor does not use a thread pool and creates a new virtual thread for each submitted task. In addition, this executor is lightweight and you can create and close it at any desired code within the _try-with-resources_ block.
 
-The following code incorrectly uses a cached thread pool executor to reuse virtual threads between tasks:
+The following code needlessly uses a cached thread pool executor to reuse virtual threads between tasks:
 
 
 ```
@@ -350,7 +350,7 @@ To summarize, these design features make virtual streams effective in these situ
 
 
 * virtual threads are _user-mode_ threads, so the overhead of their creation and _context switching_ is negligible
-* the core Java library has been refactored to make I/O operations non-blocking
+* the Java core library has been refactored to make I/O operations non-blocking
 * the virtual thread stack is much smaller and dynamically resizable
 
-Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. Considerable work has been done in the Java core library to make the existing threading and I/O classes compatible with virtual threads. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party dependencies used in your applications, must be refactored to become compatible with virtual threads.
+Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. Considerable work has been done in the Java core library to make it compatible with virtual threads. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party dependencies used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
