@@ -1,11 +1,11 @@
 @startuml
 
-'!pragma teoz true
-
 title Platform threads
 
-scale 1.1
+scale 1.0
 hide footbox
+!pragma teoz true
+
 skinparam monochrome true
 skinparam defaultFontName Source Sans Pro
 skinparam titleFontSize 15
@@ -17,18 +17,17 @@ skinparam sequenceGroupBackgroundColor #white
 
 participant "platform\nthread 1" as PlatformThread1
 participant "platform\nthread 2" as PlatformThread2
-participant "service" as Service
-
-||10||
+participant "operation\nsystem I/O" as Service
 
 ->> PlatformThread1: request 1
 activate PlatformThread1
 PlatformThread1->>Service
-'activate Service
+activate Service
 
 ->> PlatformThread2: request 2
 activate PlatformThread2
 PlatformThread2->>Service
+activate Service
 
 '->> PlatformThread2
 'activate PlatformThread2
@@ -40,12 +39,12 @@ PlatformThread2->>Service
 ||80||
 
 Service->>PlatformThread1
-'deactivate Service
+deactivate Service
 <<- PlatformThread1: response 1
 deactivate PlatformThread1
 
 Service->>PlatformThread2
-'deactivate Service
+deactivate Service
 <<- PlatformThread2: response 2
 deactivate PlatformThread2
 
