@@ -19,7 +19,7 @@ A thread is a _thread of execution_ in a program, that is an independently sched
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. Creating an OS thread is quite a time-consuming action (~1 ms), and _context switching_ of an OS thread is even longer (~100 ms). Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplified, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. The operating system affects the duration of platform thread creation and context switching, as well as on the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplified, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
 
 >Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
@@ -69,16 +69,14 @@ _Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ O
 
 The implementation of virtual threads consists of two parts: continuations and a scheduler.
 
-Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point by itself and pass control outside of the continuation. When continuation is resumed, it performs the rest of the computation. Continuation is implemented in the internal _jdk.internal.vm.Continuation_ class, and developers are not expected to use them directly.
-
->A continuation is the ability to suspend running computation and later on resume it.
+Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point by itself and pass control outside of the continuation. When continuation is resumed, it performs the rest of the computation. Continuation is implemented by the internal _jdk.internal.vm.Continuation_ class, and developers are not expected to use them directly.
 
 The virtual threads scheduler manages suspend and resume the coroutines. It is pluggable and now for this purpose is used a dedicated _ForkJoinPool_ FIFO executor.
 
 
 ### Carrier threads
 
-Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the JVM scheduler, a special _ForkJoinPool_ executor. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library (I/O and _java.util.concurrent_) have been refactored to make them non-blocking. When a virtual thread is blocked on an I/O operation, the JVM scheduler dispatches the I/O operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking I/O from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the I/O operation completes, the JVM scheduler mounts the virtual thread to an available carrier thread.
+Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the scheduler. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library (I/O and _java.util.concurrent_) have been refactored to make them non-blocking. When a virtual thread is blocked on an I/O operation, the scheduler dispatches the I/O operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking I/O from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the I/O operation completes, the scheduler mounts the virtual thread to an available carrier thread.
 
 <sub>The stack of the virtual thread is copied from the heap to the stack of the carrier thread during mounting and is moved back to the heap during the unmounting.</sub>
 
@@ -187,18 +185,13 @@ The following blocking synchronous code will benefit from using virtual threads 
 
 ```
 try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   try {
-       Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); 
-       Future<Float> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); 
-       float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); 
+   Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); 
+   Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); 
+   int netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); 
 
-       Future<Float> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
-       float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
-
-       assertEquals(108, grossAmountInUsd);
-   } catch (Exception e) {
-       fail(e);
-   }
+   Future<Integer> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
+   int grossAmountInUsd = netAmountInUsd * (1 + tax.get());
+   assertEquals(108, grossAmountInUsd);
 }
 ```
 
@@ -298,7 +291,7 @@ public void useThreadLocalVariable() throws InterruptedException {
    assertEquals("one", threadLocal.get());
 
    Thread childThread = new Thread(() -> {
-       System.out.println(threadLocal.get()); // "one"
+      assertEquals("one", threadLocal.get());
    });
    childThread.start();
    childThread.join();
@@ -319,7 +312,6 @@ public void useScopedValue() {
    ScopedValue.where(scopedValue, "zero").run(
        () -> {
            assertEquals("zero", scopedValue.get());
-
            ScopedValue.where(scopedValue, "one").run(
                () -> assertEquals("one", scopedValue.get())
            );
@@ -327,8 +319,8 @@ public void useScopedValue() {
 
            try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                scope.fork(() -> {
-                       System.out.println(scopedValue.get()); // "zero"
-                       return null;
+                       assertEquals("zero", scopedValue.get());
+                       return -1;
                    }
                );
                scope.join().throwIfFailed();
@@ -391,7 +383,7 @@ To summarize, these design features make virtual streams effective in these situ
 
 
 * virtual threads are _user-mode_ threads, so the overhead of their creation and _context switching_ is negligible
-* the Java core library has been refactored to make I/O operations non-blocking
+* the Java core library has been refactored to make operations non-blocking
 * the virtual thread stack is much smaller and dynamically resizable
 
 Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. Considerable work has been done in the Java core library to make it compatible with virtual threads. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party dependencies used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
