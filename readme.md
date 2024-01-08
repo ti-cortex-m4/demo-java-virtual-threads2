@@ -91,7 +91,7 @@ A virtual thread also cannot be unmounted during blocking operations when it is 
 
 Virtual threads are not _green treads_. Green threads were mapped to a single _kernel-mode_ OS thread. Green threads existed since Java 1.1 and in Java 1.3 were deprecated in favor of platform threads.
 
-![history o _Java threads](/images/history_of_Java_threads.png)
+![history o _Java threads](/images/history_of_Java_threads.svg)
 
 
 ## How to use virtual threads
