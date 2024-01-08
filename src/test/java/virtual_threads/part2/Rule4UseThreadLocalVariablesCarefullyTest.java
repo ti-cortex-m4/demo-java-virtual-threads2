@@ -46,7 +46,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     scope.fork(() -> {
                             assertEquals("zero", scopedValue.get());
-                            return null;
+                            return -1;
                         }
                     );
                     scope.join().throwIfFailed();
