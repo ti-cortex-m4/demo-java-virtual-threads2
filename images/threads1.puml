@@ -1,0 +1,36 @@
+@startuml
+
+skinparam {
+    defaultTextAlignment center
+    roundCorner 0
+    CardBackgroundColor transparent
+    RectangleBackgroundColor transparent
+    RectangleFontName Source Sans Pro
+    RectangleFontStyle normal
+}
+
+card GT1
+card GT2
+card GT3
+card GT4
+card GT5
+card GT6
+
+rectangle PT1
+rectangle PT2
+rectangle PT3
+rectangle PT4
+
+GT1-right[hidden]-GT2
+GT2-right[hidden]-GT3
+GT4-right[hidden]-GT5
+GT5-right[hidden]-GT6
+GT1-down[hidden]-GT4
+GT3-down[hidden]-GT6
+GT5-down[hidden]-PT1
+
+PT1-right[hidden]-PT2
+PT2-right[hidden]-PT3
+PT3-right[hidden]-PT4
+
+@enduml
