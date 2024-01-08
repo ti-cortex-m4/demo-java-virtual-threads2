@@ -21,7 +21,7 @@ A thread is a _thread of execution_ in a program, that is an independently sched
 
 _Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. Creating an OS thread is quite a time-consuming action (~1 ms), and _context switching_ of an OS thread is even longer (~100 ms). Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplified, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
 
->Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of the limited resource.
+>Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
 
 ### Virtual threads
@@ -31,9 +31,54 @@ _Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ O
 >Virtual threads are suitable for executing tasks that spend most of the time blocked and are not intended for long-running CPU-intensive operations.
 
 
+<table>
+  <tr>
+   <td>
+   </td>
+   <td>platform threads
+   </td>
+   <td>virtual threads
+   </td>
+  </tr>
+  <tr>
+   <td>stack
+   </td>
+   <td>1MB
+   </td>
+   <td><em>pay-as-you-go</em>
+   </td>
+  </tr>
+  <tr>
+   <td>thread metadata
+   </td>
+   <td>>2KB
+   </td>
+   <td>200-300B
+   </td>
+  </tr>
+  <tr>
+   <td>context switching
+   </td>
+   <td>1-10µs
+   </td>
+   <td>~200ns
+   </td>
+  </tr>
+</table>
+
+
+The implementation of virtual threads consists of two parts: continuations and a scheduler.
+
+Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point by itself and pass control outside of the continuation. When continuation is resumed, it performs the rest of the computation. Continuation is implemented in the internal _jdk.internal.vm.Continuation_ class, and developers are not expected to use them directly.
+
+>A continuation is the ability to suspend running computation and later on resume it.
+
+The virtual threads scheduler manages suspend and resume the coroutines. It is pluggable and now for this purpose is used a dedicated _ForkJoinPool_ FIFO executor.
+
+
 ### Carrier threads
 
-Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the JVM scheduler, a special _ForkJoinPool_ executor. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library have been refactored to make them non-blocking. When a virtual thread is blocked on an I/O operation, the JVM scheduler dispatches the I/O operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking I/O from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the I/O operation completes, the JVM scheduler mounts the virtual thread to an available carrier thread.
+Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the JVM scheduler, a special _ForkJoinPool_ executor. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library (I/O and _java.util.concurrent_) have been refactored to make them non-blocking. When a virtual thread is blocked on an I/O operation, the JVM scheduler dispatches the I/O operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking I/O from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the I/O operation completes, the JVM scheduler mounts the virtual thread to an available carrier thread.
 
 <sub>The stack of the virtual thread is copied from the heap to the stack of the carrier thread during mounting and is moved back to the heap during the unmounting.</sub>
 
@@ -190,7 +235,7 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
 
 The main purpose of thread pools is to reuse threads between executing multiple tasks. When tasks are submitted to a thread pool, they are inserted into a task queue. Tasks are retrieved from the queue by worker threads for execution. An additional purpose of using thread pools with a _fixed number_ of worker threads can be to limit the concurrency of a particular operation. They can be used in a situation when an external resource cannot process more than a predefined number of concurrent requests.
 
-However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, it is better to use semaphores with the same number of permits to limit concurrency. A semaphore also contains a queue inside itself not of tasks but of threads blocked on it. So, this replacement is functionally equivalent.
+However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, it is better to use semaphores with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on it.
 
 The following code, which uses a fixed pool of threads to limit concurrency when accessing some shared resource, will not benefit from the use of virtual threads:
 
