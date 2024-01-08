@@ -19,16 +19,18 @@ A thread is a _thread of execution_ in a program, that is an independently sched
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. The operating system affects the duration of platform thread creation and context switching, as well as on the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplified, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. The operating system affects the thread creation time and _context switching_ time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplified, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
 
 >Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
 
 ### Virtual threads
 
-_Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ OS threads. Virtual threads are scheduled by the JVM, rather than the OS. The stack size of virtual threads is much smaller than for platform threads and is dynamically sized. Thus, the number of virtual threads does not depend on the limitations of the OS. A typical JVM can support millions of virtual threads.
+_Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ OS threads. Virtual threads are scheduled by the JVM, rather than the OS. A virtual thread is a regular Java object, so the thread creation time and thread switching time is negligible. The stack size of virtual threads is much smaller than for platform threads and is dynamically sized. Thus, the number of virtual threads does not depend on the limitations of the OS. A typical JVM can support millions of virtual threads.
 
 >Virtual threads are suitable for executing tasks that spend most of the time blocked and are not intended for long-running CPU-intensive operations.
+
+Summary of quantitative differences between platform and virtual threads:
 
 
 <table>
@@ -41,27 +43,27 @@ _Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ O
    </td>
   </tr>
   <tr>
-   <td>stack
+   <td>stack size
    </td>
-   <td>1MB
+   <td>1 MB
    </td>
-   <td><em>pay-as-you-go</em>
-   </td>
-  </tr>
-  <tr>
-   <td>thread metadata
-   </td>
-   <td>>2KB
-   </td>
-   <td>200-300B
+   <td>resizable
    </td>
   </tr>
   <tr>
-   <td>context switching
+   <td>thread metadata size
    </td>
-   <td>1-10µs
+   <td>> 2KB
    </td>
-   <td>~200ns
+   <td>200-300 B
+   </td>
+  </tr>
+  <tr>
+   <td>context switching time
+   </td>
+   <td>1-10 µs
+   </td>
+   <td>~ 0.2 µs
    </td>
   </tr>
 </table>
@@ -69,20 +71,27 @@ _Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ O
 
 The implementation of virtual threads consists of two parts: continuations and a scheduler.
 
-Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point by itself and pass control outside of the continuation. When continuation is resumed, it performs the rest of the computation. Continuation is implemented by the internal _jdk.internal.vm.Continuation_ class, and developers are not expected to use them directly.
+Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may yield execution at some point by itself and pass control outside of itself. When continuation is resumed, control returns to the last yield point, with the execution context up to the entry point remains intact. Continuation is implemented by the internal _jdk.internal.vm.Continuation_ class, and developers are not expected to use them directly.
 
-The virtual threads scheduler manages suspend and resume the coroutines. It is pluggable and now for this purpose is used a dedicated _ForkJoinPool_ FIFO executor.
+The virtual threads scheduler manages the yelding and resuming the coroutines. It is pluggable and now for this purpose is used a dedicated _ForkJoinPool_ FIFO executor.
 
 
 ### Carrier threads
 
-Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the scheduler. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library (I/O and _java.util.concurrent_) have been refactored to make them non-blocking. When a virtual thread is blocked on an I/O operation, the scheduler dispatches the I/O operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking I/O from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the I/O operation completes, the scheduler mounts the virtual thread to an available carrier thread.
+Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the scheduler. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library (I/O and _java.util.concurrent_) have been refactored to make them non-blocking. When a virtual thread is blocked on such an operation, the scheduler dispatches the operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking operation from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the operation completes, the scheduler mounts the virtual thread to an available carrier thread.
 
 <sub>The stack of the virtual thread is copied from the heap to the stack of the carrier thread during mounting and is moved back to the heap during the unmounting.</sub>
 
 However, some operations in the Java core library do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a platform thread to the JVM scheduler.
 
 A virtual thread also cannot be unmounted during blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a _native method,_ or a _foreign function_. During pinning, the JVM scheduler does not create an additional carrier thread, so frequent and long-lived pinning may worsen the scalability of the application.
+
+
+### Green threads
+
+Virtual threads are not _green treads_. Green threads were mapped to a single _kernel-mode_ OS thread. Green threads existed since Java 1.1 and in Java 1.3 were deprecated in favor of platform threads.
+
+![history o _Java threads](/images/history_of_Java_threads.png)
 
 
 ## How to use virtual threads
