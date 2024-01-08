@@ -49,7 +49,6 @@ public class Rule1WriteBlockingSynchronousCodeTest {
 
             Future<Float> tax = executorService.submit(() -> readTax(netAmountInUsd));
             float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
-
             assertEquals(165, grossAmountInUsd);
 
             long durationMillis = System.currentTimeMillis() - startMillis;

@@ -14,17 +14,17 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class Rule4UseThreadLocalVariablesCarefullyTest {
 
     private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
+    private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
 
     @Test
     public void useThreadLocalVariable() throws InterruptedException {
         threadLocal.set("zero");
         assertEquals("zero", threadLocal.get());
-
         threadLocal.set("one");
         assertEquals("one", threadLocal.get());
 
         Thread childThread = new Thread(() -> {
-            System.out.println(threadLocal.get()); // "one"
+            assertEquals("one", threadLocal.get());
         });
         childThread.start();
         childThread.join();
@@ -33,15 +33,11 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
         assertNull(threadLocal.get());
     }
 
-
-    private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
-
     @Test
     public void useScopedValue() {
         ScopedValue.where(scopedValue, "zero").run(
             () -> {
                 assertEquals("zero", scopedValue.get());
-
                 ScopedValue.where(scopedValue, "one").run(
                     () -> assertEquals("one", scopedValue.get())
                 );
@@ -49,7 +45,7 @@ public class Rule4UseThreadLocalVariablesCarefullyTest {
 
                 try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
                     scope.fork(() -> {
-                            System.out.println(scopedValue.get()); // "zero"
+                            assertEquals("zero", scopedValue.get());
                             return null;
                         }
                     );
