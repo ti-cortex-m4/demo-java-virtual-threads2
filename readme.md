@@ -5,7 +5,7 @@
 
 Java _virtual threads_ are lightweight threads designed to develop _high-throughput_ concurrent applications. Pre-existing Java threads were based on operating system (OS) threads, which proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the JVM cannot efficiently handle more than a few thousand threads.
 
-If programmers continue to use threads as the concurrent model, they will severely limit the performance of their applications. Alternatively, they can switch to other concurrent models (for example, callbacks, [futures](https://github.com/aliakh/demo-java-completablefuture/blob/master/readme.md), or reactive streams) that do not block threads. Such solutions, while showing much better performance, are much more difficult to write, debug, and understand.
+If programmers continue to use threads as the concurrent model, they will severely limit the scalability of their applications. Alternatively, they can switch to other concurrent models (for example, callbacks, [futures](https://github.com/aliakh/demo-java-completablefuture/blob/master/readme.md), or reactive streams) that do not block threads. Such solutions, while showing much better scalability, are much more difficult to write, debug, and understand.
 
 The purpose of virtual threads is to add lightweight, user-space threads managed by the JVM to be used alongside the existing heavyweight, kernel-space threads managed by the OS. Programmers can create millions of virtual threads and get much better throughput using much simpler synchronous blocking code.
 
@@ -53,7 +53,7 @@ Summary of quantitative differences between platform and virtual threads:
   <tr>
    <td>thread metadata size
    </td>
-   <td>> 2KB
+   <td>> 2 KB
    </td>
    <td>200-300 B
    </td>
@@ -71,14 +71,14 @@ Summary of quantitative differences between platform and virtual threads:
 
 The implementation of virtual threads consists of two parts: continuations and a scheduler.
 
-Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may yield execution at some point by itself and pass control outside of itself. When continuation is resumed, control returns to the last yield point, with the execution context up to the entry point remains intact. Continuation is implemented by the internal _jdk.internal.vm.Continuation_ class, and developers are not expected to use them directly.
+Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may yield execution at some point by itself and pass control outside. When continuation is resumed, control returns to the last yield point, with the execution context up to the entry point remains intact. Continuation is implemented by the internal _jdk.internal.vm.Continuation_ class, and developers are not expected to use them directly.
 
 The virtual threads scheduler manages the yelding and resuming the coroutines. It is pluggable and now for this purpose is used a dedicated _ForkJoinPool_ FIFO executor.
 
 
 ### Carrier threads
 
-Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the scheduler. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library (I/O and _java.util.concurrent_) have been refactored to make them non-blocking. When a virtual thread is blocked on such an operation, the scheduler dispatches the operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking operation from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the operation completes, the scheduler mounts the virtual thread to an available carrier thread.
+Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the scheduler. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library (mainly I/O and _java.util.concurrent_) have been refactored to make them non-blocking. When a virtual thread is blocked on such an operation, the scheduler dispatches the operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking operation from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the operation completes, the scheduler mounts the virtual thread to an available carrier thread.
 
 <sub>The stack of the virtual thread is copied from the heap to the stack of the carrier thread during mounting and is moved back to the heap during the unmounting.</sub>
 
@@ -89,9 +89,9 @@ A virtual thread also cannot be unmounted during blocking operations when it is 
 
 ### Green threads
 
-Virtual threads are not _green treads_. Green threads were mapped to a single _kernel-mode_ OS thread. Green threads existed since Java 1.1 and in Java 1.3 were deprecated in favor of platform threads.
+Virtual threads are not _green treads_. Green threads were mapped to a single _kernel-mode_ OS thread. Green threads existed from Java 1.1 to Java 1.3 and were deprecated in favor of platform threads.
 
-![history o _Java threads](/images/history_of_Java_threads.svg)
+![types of Java threads](/images/types_of_Java_threads.svg)
 
 
 ## How to use virtual threads
@@ -210,7 +210,7 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
 
 Creating a platform thread is a rather time-consuming process because it requires the creation of an OS thread. Thread pool executors are designed to reduce this time by reusing threads between task executions. They contain a pool of pre-created worker threads to _Runnable_ and _Callable_ tasks are passed through a blocking queue.
 
-Unlike creating platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the program requires an _ExecutorService_ instance, use a specially designed implementation for virtual threads, created in the static factory method _Executors.newVirtualThreadPerTaskExecutor()_. This executor does not use a thread pool and creates a new virtual thread for each submitted task. In addition, this executor is lightweight and you can create and close it at any desired code within the _try-with-resources_ block.
+Unlike creating platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the program requires an _ExecutorService_ instance, use a specially designed implementation for virtual threads, which is returned from the static factory method _Executors.newVirtualThreadPerTaskExecutor()_. This executor does not use a thread pool and creates a new virtual thread for each submitted task. In addition, this executor is lightweight, so you can create and close it at any desired code within the _try-with-resources_ block.
 
 The following code needlessly uses a cached thread pool executor to reuse virtual threads between tasks:
 
@@ -237,7 +237,7 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
 
 The main purpose of thread pools is to reuse threads between executing multiple tasks. When tasks are submitted to a thread pool, they are inserted into a task queue. Tasks are retrieved from the queue by worker threads for execution. An additional purpose of using thread pools with a _fixed number_ of worker threads can be to limit the concurrency of a particular operation. They can be used in a situation when an external resource cannot process more than a predefined number of concurrent requests.
 
-However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, it is better to use semaphores with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on it.
+However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, it is better to use a _Semaphore_ with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on it.
 
 The following code, which uses a fixed pool of threads to limit concurrency when accessing some shared resource, will not benefit from the use of virtual threads:
 
@@ -272,7 +272,7 @@ public String useSemaphoreToLimitConcurrency() throws InterruptedException {
 
 ### Use thread-local variables carefully or switch to scoped values
 
-To achieve better scalability of virtual threads, you should reconsider using _thread-local variables_ and _inheritable-thread-local variables_. Thread-local variables provide each thread with its copy of a variable, which is set to a value that is independent of the values set by other threads. A thread-local variable works as an implicit, thread-bound parameter and allows passing data from a caller to a callee through a sequence of intermediate methods.
+To achieve better scalability of virtual threads, you should reconsider using _thread-local variables_ and _inheritable-thread-local variables_. Thread-local variables provide each thread with its copy of a variable, which is set to a value independent of the values set by other threads. A thread-local variable works as an implicit, thread-bound parameter and allows passing data from a caller to a callee through a sequence of intermediate methods.
 
 Virtual threads support thread-local behavior in the same way as platform threads. But because virtual threads can be very numerous, the following design features of thread-local variables can have a more significant negative impact:
 
@@ -282,7 +282,7 @@ Virtual threads support thread-local behavior in the same way as platform thread
 * _unbounded lifetime_ (once a copy of a thread-local variable is set via the _set_ method, the value is retained for the lifetime of the thread, or until code in the thread calls the _remove_ method)
 * _expensive inheritance_ (each child thread copies, not reuses, _inheritable-thread-local variables_ of the parent thread)
 
-Getting rid of thread-local variables can be a challenge. In some cases, _scoped values_ may be a better alternative to thread-local variables, especially when using large numbers of virtual threads. Unlike a thread-local variable, a scoped value is written once, is available only for a bounded context, and is inherited in a _structured concurrency_ scope.
+Getting rid of thread-local variables can be a challenge. Somethimes, _scoped values_ may be a better alternative to thread-local variables, especially when using large numbers of virtual threads. Unlike a thread-local variable, a scoped value is written once, is available only for a bounded context, and is inherited in a _structured concurrency_ scope.
 
 <sub>Scoped values are a preview feature in Java 20 and have not been released at the time of writing.</sub>
 
@@ -385,14 +385,14 @@ public String useReentrantLockForExclusiveAccess() {
 
 ## Conclusion
 
-Virtual threads are intended for developing high-throughput concurrent applications when a programmer has access to millions of units of concurrency that have the well-known _Thread_ class. Virtual threads are intended to replace platform threads in those applications that spend most of their time blocked on I/O operations.
+Virtual threads are designed for developing high-throughput concurrent applications, when a programmer can create millions of units of concurrency with the well-known _Thread_ class. Virtual threads are intended to replace platform threads in those applications that spend most of their time blocked on I/O operations.
 
 To summarize, these design features make virtual streams effective in these situations:
 
 
 
 * virtual threads are _user-mode_ threads, so the overhead of their creation and _context switching_ is negligible
-* the Java core library has been refactored to make operations non-blocking
+* the Java core library has been refactored to make most of the operations non-blocking
 * the virtual thread stack is much smaller and dynamically resizable
 
-Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. Considerable work has been done in the Java core library to make it compatible with virtual threads. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party dependencies used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
+Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. Considerable work has been done in the Java core library to make it compatible with virtual threads: refactored to make I/O and concurrent operations non-blocking, as well as getting rid of thread-local variables. Its code still behaves blocking, but from the perspective of the OS, no kernel thread is actually blocked. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party dependencies used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
