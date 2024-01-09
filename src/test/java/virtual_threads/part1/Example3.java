@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class Example3StartVirtualThreadFactoryMethod {
+public class Example3 {
 
     @Test
     public void test2() throws InterruptedException {

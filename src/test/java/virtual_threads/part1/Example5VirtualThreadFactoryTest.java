@@ -6,7 +6,7 @@ import java.util.concurrent.ThreadFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class Example5ThreadFactoryTest {
+public class Example5VirtualThreadFactoryTest {
 
     @Test
     public void virtualThreadFactoryTest() throws InterruptedException {
