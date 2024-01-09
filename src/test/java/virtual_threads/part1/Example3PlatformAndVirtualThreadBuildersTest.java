@@ -2,14 +2,11 @@ package virtual_threads.part1;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class Example3ThreadBuildersTest {
+public class Example3PlatformAndVirtualThreadBuildersTest {
 
     @Test
     public void platformThreadBuilderTest() {

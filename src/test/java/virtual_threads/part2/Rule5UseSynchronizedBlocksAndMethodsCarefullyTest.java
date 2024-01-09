@@ -2,7 +2,7 @@ package virtual_threads.part2;
 
 import java.util.concurrent.locks.ReentrantLock;
 
-public class UseSynchronizedBlocksAndMethodsCarefullyTest {
+public class Rule5UseSynchronizedBlocksAndMethodsCarefullyTest {
 
     private final Object lockObject = new Object();
 

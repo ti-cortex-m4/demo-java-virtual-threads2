@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class Example1 {
+public class Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void test1() throws InterruptedException {

@@ -14,9 +14,9 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class WriteBlockingSynchronousCodeTest {
+public class Rule1WriteBlockingSynchronousCodeTest {
 
-    private static final Logger logger = LoggerFactory.getLogger(WriteBlockingSynchronousCodeTest.class);
+    private static final Logger logger = LoggerFactory.getLogger(Rule1WriteBlockingSynchronousCodeTest.class);
 
     @Test
     public void blockingSynchronousCodeTest() throws ExecutionException, InterruptedException {

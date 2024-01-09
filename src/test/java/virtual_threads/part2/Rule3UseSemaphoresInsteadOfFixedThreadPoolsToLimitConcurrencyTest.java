@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
-public class UseSemaphoresInsteadOfFixedThreadPoolsTest {
+public class Rule3UseSemaphoresInsteadOfFixedThreadPoolsToLimitConcurrencyTest {
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
