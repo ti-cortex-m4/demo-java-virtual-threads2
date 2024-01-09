@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class Rule4UseThreadLocalVariablesCarefullyTest {
+public class UseThreadLocalVariablesCarefullyTest {
 
     private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
     private final ScopedValue<String> scopedValue = ScopedValue.newInstance();

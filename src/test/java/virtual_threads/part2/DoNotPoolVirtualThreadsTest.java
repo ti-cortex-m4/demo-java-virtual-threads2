@@ -6,7 +6,7 @@ import virtual_threads.AbstractTest;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 
-public class Rule2DoNotPoolVirtualThreadsTest extends AbstractTest {
+public class DoNotPoolVirtualThreadsTest extends AbstractTest {
 
     @Test
     public void doTest() throws InterruptedException, ExecutionException {
