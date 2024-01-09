@@ -14,12 +14,12 @@ The purpose of virtual threads is to add lightweight, user-space threads managed
 
 ## Platform threads and virtual threads
 
-A thread is a _thread of execution_ in a program, that is an independently scheduled execution unit that belongs to a process in the OS. This entity has a program counter and stack. The _Thread_ class is a facade to manage _threads of execution_ in the JVM. This class has fields, methods, and constructors. There are two kinds of threads, platform threads and virtual threads.
+A thread is a _thread of execution_ in a program, that is an independently scheduled execution unit that belongs to a process in the OS. This entity has a program counter and stack. The _Thread_ class is a facade to manage threads of execution in the JVM. This class has fields, methods, and constructors. There are two kinds of threads, platform threads and virtual threads.
 
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. The operating system affects the thread creation time and _context switching_ time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplified, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. The operating system affects the thread creation time and the _context switching_ time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory. Simplified, the maximum number of OS threads can be calculated as the total virtual memory size divided by the stack size. So, the number of available platform threads is limited to the number of OS threads. A typical JVM can support no more than a few thousand platform threads.
 
 >Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
@@ -169,41 +169,7 @@ Blocking a platform thread keeps the OS thread, a limited resource, from doing u
 
 In contrast, blocking a virtual thread is cheap and even encouraged. It allows virtual threads to write blocking synchronous code in a simple thread-per-task style. This allows programmers to create simpler yet efficient concurrent code.
 
-The following non-blocking asynchronous code will not benefit much from using virtual threads, because the _CompletableFuture_ class already manages the blocking of the threads:
-
-<sub>The following code is a simplified example of an asynchronous multistage workflow. First, we call two long-running methods that return a product price in the EUR and the EUR/USD exchange rate. Then we calculate the net product price from the results of these methods. Then we call the third long-running method that takes the net product price and returns the tax amount. Finally, we calculate the gross product price from the net product price and the tax amount.</sub>
-
-
-```
-CompletableFuture.supplyAsync(this::getPriceInEur) 
-   .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) 
-   .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) 
-   .whenComplete((grossAmountInUsd, t) -> { 
-       if (t == null) {
-           assertEquals(108, grossAmountInUsd);
-       } else {
-           fail(t);
-       }
-   })
-   .get(); 
-```
-
-
-The following blocking synchronous code will benefit from using virtual threads because the much simpler code returns the same value for the same duration as the previous complex one:
-
-
-```
-try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); 
-   Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); 
-   int netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); 
-
-   Future<Integer> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
-   int grossAmountInUsd = netAmountInUsd * (1 + tax.get());
-   assertEquals(108, grossAmountInUsd);
-}
-```
-
+[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#write-blocking-synchronous-code-in-the-thread-per-task-style)
 
 
 ### Do not pool virtual threads
@@ -212,25 +178,7 @@ Creating a platform thread is a rather time-consuming process because it require
 
 Unlike creating platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the program requires an _ExecutorService_ instance, use a specially designed implementation for virtual threads, which is returned from the static factory method _Executors.newVirtualThreadPerTaskExecutor()_. This executor does not use a thread pool and creates a new virtual thread for each submitted task. In addition, this executor is lightweight, so you can create and close it at any desired code within the _try-with-resources_ block.
 
-The following code needlessly uses a cached thread pool executor to reuse virtual threads between tasks:
-
-
-```
-try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
-   executorService.submit(() -> { sleep(1000); System.out.println("omega"); });
-}
-```
-
-
-The following code correctly uses a _thread-per-task_ virtual thread executor to create a new thread for each task:
-
-
-```
-try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   executorService.submit(() -> { sleep(1000); System.out.println("alpha"); });
-}
-```
-
+[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#do-not-pool-virtual-threads)
 
 
 ### Use semaphores instead of fixed thread pools to limit concurrency
@@ -239,35 +187,7 @@ The main purpose of thread pools is to reuse threads between executing multiple 
 
 However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, it is better to use a _Semaphore_ with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on it.
 
-The following code, which uses a fixed pool of threads to limit concurrency when accessing some shared resource, will not benefit from the use of virtual threads:
-
-
-```
-private final ExecutorService executorService = Executors.newFixedThreadPool(8);
-
-public String useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
-   Future<String> future = executorService.submit(this::sharedResource());
-   return future.get();
-}
-```
-
-
-The following code, which uses a semaphore to limit concurrency when accessing some shared resource, will benefit from the use of virtual threads:
-
-
-```
-private final Semaphore semaphore = new Semaphore(8);
-
-public String useSemaphoreToLimitConcurrency() throws InterruptedException {
-   semaphore.acquire();
-   try {
-       return sharedResource();
-   } finally {
-       semaphore.release();
-   }
-}
-```
-
+[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#use-semaphores-instead-of-fixed-thread-pools-to-limit-concurrency)
 
 
 ### Use thread-local variables carefully or switch to scoped values
@@ -286,63 +206,7 @@ Getting rid of thread-local variables can be a challenge. Somethimes, _scoped va
 
 <sub>Scoped values are a preview feature in Java 20 and have not been released at the time of writing.</sub>
 
-The following code shows that a thread-local variable is mutable, is inherited in a child thread started from the parent thread, and exists until it is removed.
-
-
-```
-private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
-
-public void useThreadLocalVariable() throws InterruptedException {
-   threadLocal.set("zero");
-   assertEquals("zero", threadLocal.get());
-
-   threadLocal.set("one");
-   assertEquals("one", threadLocal.get());
-
-   Thread childThread = new Thread(() -> {
-      assertEquals("one", threadLocal.get());
-   });
-   childThread.start();
-   childThread.join();
-
-   threadLocal.remove();
-   assertNull(threadLocal.get());
-}
-```
-
-
-The following code shows that a scoped value is immutable, is reused in a structured concurrency scope, and exists only in a bounded context.
-
-
-```
-private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
-
-public void useScopedValue() {
-   ScopedValue.where(scopedValue, "zero").run(
-       () -> {
-           assertEquals("zero", scopedValue.get());
-           ScopedValue.where(scopedValue, "one").run(
-               () -> assertEquals("one", scopedValue.get())
-           );
-           assertEquals("zero", scopedValue.get());
-
-           try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-               scope.fork(() -> {
-                       assertEquals("zero", scopedValue.get());
-                       return -1;
-                   }
-               );
-               scope.join().throwIfFailed();
-           } catch (InterruptedException | ExecutionException e) {
-               fail(e);
-           }
-       }
-   );
-
-   assertThrows(NoSuchElementException.class, scopedValue::get);
-}
-```
-
+[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#use-thread-local-variables-carefully-or-switch-to-scoped-values)
 
 
 ### Use synchronized blocks and methods carefully or switch to reentrant locks
@@ -351,43 +215,14 @@ To improve scalability using virtual threads, you should revise _synchronized_ b
 
 <sub>To identify pinning, you can use the JVM flag <em>-Djdk.tracePinnedThreads=full</em> when executing your application.</sub>
 
-The following code uses a _synchronized_ block with an explicit object lock that causes pinning of virtual threads:
-
-
-```
-private final Object lockObject = new Object();
-
-public String useSynchronizedBlockForExclusiveAccess() {
-   synchronized (lockObject) {
-       return exclusiveResource();
-   }
-}
-```
-
-
-The following code uses a _ReentrantLock_ that does not cause pinning of virtual threads:
-
-
-```
-private final ReentrantLock reentrantLock = new ReentrantLock();
-
-public String useReentrantLockForExclusiveAccess() {
-   reentrantLock.lock();
-   try {
-       return exclusiveResource();
-   } finally {
-       reentrantLock.unlock();
-   }
-}
-```
-
+[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#use-synchronized-blocks-and-methods-carefully-or-switch-to-reentrant-locks)
 
 
 ## Conclusion
 
 Virtual threads are designed for developing high-throughput concurrent applications, when a programmer can create millions of units of concurrency with the well-known _Thread_ class. Virtual threads are intended to replace platform threads in those applications that spend most of their time blocked on I/O operations.
 
-To summarize, these design features make virtual streams effective in these situations:
+To summarize, these design features make virtual threads effective in these situations:
 
 
 
