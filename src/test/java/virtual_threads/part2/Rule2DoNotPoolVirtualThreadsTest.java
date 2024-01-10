@@ -9,7 +9,7 @@ import java.util.concurrent.Executors;
 public class Rule2DoNotPoolVirtualThreadsTest extends AbstractTest {
 
     @Test
-    public void doTest() throws InterruptedException, ExecutionException {
+    public void doTest() {
         try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             System.out.println(executorService); // java.util.concurrent.ThreadPerTaskExecutor@23941fb4
 
@@ -18,7 +18,7 @@ public class Rule2DoNotPoolVirtualThreadsTest extends AbstractTest {
     }
 
     @Test
-    public void doNotTest() throws InterruptedException, ExecutionException {
+    public void doNotTest() {
         try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
             System.out.println(executorService); // java.util.concurrent.ThreadPoolExecutor@f68f0dc[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
 

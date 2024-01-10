@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class Example4ThreadFactoryTest {
 
     @Test
-    public void virtualThreadFactory() throws InterruptedException {
+    public void virtualThreadFactory() {
         Thread.Builder builder = Thread.ofVirtual()
             .name("a virtual thread");
 
