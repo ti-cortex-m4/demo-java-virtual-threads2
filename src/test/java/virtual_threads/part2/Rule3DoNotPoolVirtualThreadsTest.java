@@ -3,10 +3,9 @@ package virtual_threads.part2;
 import org.junit.jupiter.api.Test;
 import virtual_threads.AbstractTest;
 
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 
-public class Rule2DoNotPoolVirtualThreadsTest extends AbstractTest {
+public class Rule3DoNotPoolVirtualThreadsTest extends AbstractTest {
 
     @Test
     public void doTest() {

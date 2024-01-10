@@ -44,5 +44,6 @@ public class Example1PlatformAndVirtualThreadsTest {
 
         assertTrue(thread.isVirtual());
         assertEquals("java.lang.VirtualThread", thread.getClass().getName());
+        assertEquals("", thread.getName());
     }
 }
