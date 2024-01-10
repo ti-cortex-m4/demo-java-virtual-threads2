@@ -29,6 +29,6 @@ public class Rule4UseSemaphoresInsteadOfFixedThreadPoolsTest {
 
 
     private String sharedResource() {
-        return "";
+        return "result";
     }
 }

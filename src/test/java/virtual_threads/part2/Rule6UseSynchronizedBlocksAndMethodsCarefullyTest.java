@@ -26,6 +26,6 @@ public class Rule6UseSynchronizedBlocksAndMethodsCarefullyTest {
 
 
     private String exclusiveResource() {
-        return "";
+        return "result";
     }
 }
