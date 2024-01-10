@@ -6,13 +6,16 @@ import java.util.concurrent.ThreadFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class Example5VirtualThreadFactoryTest {
+public class Example4ThreadFactoryTest {
 
     @Test
-    public void virtualThreadFactoryTest() throws InterruptedException {
+    public void virtualThreadFactory() throws InterruptedException {
         Thread.Builder builder = Thread.ofVirtual()
             .name("a virtual thread");
+
         ThreadFactory threadFactory = builder.factory();
+        System.out.println(threadFactory.getClass().getName()); // java.lang.ThreadBuilders$VirtualThreadFactory
+
         Thread thread = threadFactory.newThread(() -> System.out.println("run"));
 
         assertEquals("a virtual thread", thread.getName());

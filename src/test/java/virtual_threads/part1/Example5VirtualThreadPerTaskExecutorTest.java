@@ -9,7 +9,7 @@ import java.util.concurrent.Future;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class Example6VirtualThreadPerTaskExecutorTest {
+public class Example5VirtualThreadPerTaskExecutorTest {
 
     @Test
     public void virtualThreadPerTaskExecutorTest() throws InterruptedException, ExecutionException {
