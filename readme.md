@@ -169,7 +169,7 @@ Blocking a platform thread keeps the OS thread, a limited resource, from doing u
 
 In contrast, blocking a virtual thread is low-cost, and moreover, it is its main design feature. While the blocked virtual thread is waiting for the operation to complete, the carrier thread and the underlying OS thread are not blocked. This allows programmers to create simpler yet efficient concurrent code in the thread-per-task style.
 
-[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#write-blocking-synchronous-code-in-the-thread-per-task-style)
+[code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#write-blocking-synchronous-code-in-the-thread-per-task-style)
 
 
 ### Do not pool virtual threads
@@ -178,7 +178,7 @@ Creating a platform thread is a rather time-consuming process because it require
 
 Unlike creating platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the program requires an _ExecutorService_ instance, use a specially designed implementation for virtual threads, which is returned from the static factory method _Executors.newVirtualThreadPerTaskExecutor()_. This executor does not use a thread pool and creates a new virtual thread for each submitted task. In addition, this executor itself is lightweight, so you can create and close it at any desired code within the _try-with-resources_ block.
 
-[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#do-not-pool-virtual-threads)
+[code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#do-not-pool-virtual-threads)
 
 
 ### Use semaphores instead of fixed thread pools to limit concurrency
@@ -187,7 +187,7 @@ The main purpose of thread pools is to reuse threads between executing multiple 
 
 However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, it is better to use a _Semaphore_ with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on it.
 
-[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#use-semaphores-instead-of-fixed-thread-pools-to-limit-concurrency)
+[code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-semaphores-instead-of-fixed-thread-pools-to-limit-concurrency)
 
 
 ### Use thread-local variables carefully or switch to scoped values
@@ -206,7 +206,7 @@ Sometimes, _scoped values_ may be a better alternative to thread-local variables
 
 <sub>Scoped values are a preview feature in Java 20 and have not been released at the time of writing.</sub>
 
-[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#use-thread-local-variables-carefully-or-switch-to-scoped-values)
+[code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-thread-local-variables-carefully-or-switch-to-scoped-values)
 
 
 ### Use synchronized blocks and methods carefully or switch to reentrant locks
@@ -215,7 +215,7 @@ To improve scalability using virtual threads, you should revise _synchronized_ b
 
 <sub>To identify pinning, you can use the JVM flag <em>-Djdk.tracePinnedThreads=full</em> when executing your application.</sub>
 
-[code examples](https://github.com/aliakh/demo-project-loom/blob/main/src/test/java/virtual_threads/part2/readme.md#use-synchronized-blocks-and-methods-carefully-or-switch-to-reentrant-locks)
+[code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-synchronized-blocks-and-methods-carefully-or-switch-to-reentrant-locks)
 
 
 ## Conclusion
@@ -231,3 +231,5 @@ To summarize, these design features make virtual threads effective in these situ
 * the virtual thread stack is much smaller and dynamically resizable
 
 Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. Considerable work has been done in the Java core library to make it compatible with virtual threads: refactored to make I/O and concurrent operations non-blocking, as well as getting rid of thread-local variables. Its pre-existing blocking code still behaves the same, but no OS thread is actually blocked. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party dependencies used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
+
+Complete code examples are available in the [GitHub repository](https://github.com/aliakh/demo-java-virtual-threads).
