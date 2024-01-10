@@ -10,7 +10,7 @@ public class Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createPlatformThreadByConstructor() throws InterruptedException {
-        Thread thread = new Thread(() -> System.out.println("run"));
+        Thread thread = new Thread(() -> System.out.println("run platform thread"));
         thread.start();
         thread.join();
 
@@ -20,7 +20,7 @@ public class Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createPlatformThreadByBuilder() throws InterruptedException {
-        Thread thread = Thread.ofPlatform().start(() -> System.out.println("run"));
+        Thread thread = Thread.ofPlatform().start(() -> System.out.println("run platform thread"));
         thread.join();
 
         assertFalse(thread.isVirtual());
@@ -29,7 +29,7 @@ public class Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createVirtualThreadByStaticFactoryMethod() throws InterruptedException {
-        Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
+        Thread thread = Thread.startVirtualThread(() -> System.out.println("run virtual thread"));
         thread.join();
 
         assertTrue(thread.isVirtual());
@@ -38,7 +38,7 @@ public class Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createVirtualThreadByBuilder() throws InterruptedException {
-        Thread thread = Thread.ofVirtual().start(() -> System.out.println("run"));
+        Thread thread = Thread.ofVirtual().start(() -> System.out.println("run virtual thread"));
         thread.join();
 
         assertTrue(thread.isVirtual());

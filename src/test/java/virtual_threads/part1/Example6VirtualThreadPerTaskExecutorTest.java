@@ -14,7 +14,9 @@ public class Example6VirtualThreadPerTaskExecutorTest {
     @Test
     public void virtualThreadPerTaskExecutorTest() throws InterruptedException, ExecutionException {
         try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-            Future<?> future = executorService.submit(() -> System.out.println("run"));
+            System.out.println(executorService.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
+
+            Future<?> future = executorService.submit(() -> System.out.println("run virtual thread"));
             future.get();
         }
     }

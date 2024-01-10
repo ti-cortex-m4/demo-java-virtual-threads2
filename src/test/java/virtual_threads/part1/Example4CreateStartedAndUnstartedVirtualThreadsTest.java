@@ -1,13 +1,14 @@
 package virtual_threads.part1;
 
 import org.junit.jupiter.api.Test;
+import virtual_threads.AbstractTest;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
+public class Example4CreateStartedAndUnstartedVirtualThreadsTest extends AbstractTest {
 
     @Test
     public void createStartedThreadTest() throws InterruptedException {
@@ -19,6 +20,7 @@ public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
 
         Thread unstartedThread = builder.unstarted(() -> System.out.println("run"));
         assertEquals(Thread.State.NEW, unstartedThread.getState());
+
         unstartedThread.start();
         assertEquals(Thread.State.RUNNABLE, unstartedThread.getState());
         unstartedThread.join();
@@ -27,18 +29,12 @@ public class Example4CreateStartedAndUnstartedVirtualThreadsTest {
     @Test
     public void createUnstartedThreadTest() throws InterruptedException {
         Thread.Builder builder = Thread.ofVirtual();
-        Thread unstartedThread = builder.unstarted(() -> System.out.println("run"));
-        assertEquals(Thread.State.NEW, unstartedThread.getState());
-        unstartedThread.start();
-        assertEquals(Thread.State.RUNNABLE, unstartedThread.getState());
-        unstartedThread.join();
-    }
+        Thread thread = builder.unstarted(() -> System.out.println("run"));
 
-    private void sleep(int milliseconds) {
-        try {
-            TimeUnit.MILLISECONDS.sleep(milliseconds);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        assertEquals(Thread.State.NEW, thread.getState());
+        thread.start();
+
+        assertEquals(Thread.State.RUNNABLE, thread.getState());
+        thread.join();
     }
 }

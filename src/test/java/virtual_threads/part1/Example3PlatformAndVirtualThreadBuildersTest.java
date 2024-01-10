@@ -18,7 +18,7 @@ public class Example3PlatformAndVirtualThreadBuildersTest {
             .name("a platform thread")
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
-        Thread thread = builder.unstarted(() -> System.out.println("run platform"));
+        Thread thread = builder.unstarted(() -> System.out.println("run platform thread"));
 
         assertEquals("a platform thread", thread.getName());
         assertEquals("main", thread.getThreadGroup().getName());

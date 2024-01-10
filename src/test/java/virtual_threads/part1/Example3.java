@@ -12,15 +12,15 @@ public class Example3 {
 
     @Test
     public void test2() throws InterruptedException {
-        Thread virtualThread = Thread.startVirtualThread(() -> { sleep(1000); System.out.println("run virtual thread"); });
+        Thread thread = Thread.startVirtualThread(() -> { sleep(1000); System.out.println("run virtual thread"); });
 
-        assertTrue(virtualThread.isVirtual());
-        assertEquals("", virtualThread.getName());
-        assertEquals("VirtualThreads", virtualThread.getThreadGroup().getName());
-        assertTrue(virtualThread.isDaemon());
-        assertEquals(5, virtualThread.getPriority());
+        assertTrue(thread.isVirtual());
+        assertEquals("", thread.getName());
+        assertEquals("VirtualThreads", thread.getThreadGroup().getName());
+        assertTrue(thread.isDaemon());
+        assertEquals(5, thread.getPriority());
 
-        virtualThread.join();
+        thread.join();
     }
 
     private void sleep(int milliseconds) {
