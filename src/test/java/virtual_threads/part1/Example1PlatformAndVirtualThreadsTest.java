@@ -9,19 +9,39 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class Example1PlatformAndVirtualThreadsTest {
 
     @Test
-    public void test1() throws InterruptedException {
-        Thread platformThread = new Thread(() -> System.out.println("run platform thread"));
-        platformThread.start();
-        platformThread.join();
-        assertFalse(platformThread.isVirtual());
-        assertEquals("java.lang.Thread", platformThread.getClass().getName());
+    public void createPlatformThreadByConstructor() throws InterruptedException {
+        Thread thread = new Thread(() -> System.out.println("run"));
+        thread.start();
+        thread.join();
+
+        assertFalse(thread.isVirtual());
+        assertEquals("java.lang.Thread", thread.getClass().getName());
     }
 
     @Test
-    public void test2() throws InterruptedException {
-        Thread virtualThread = Thread.startVirtualThread(() -> System.out.println("run virtual thread"));
-        virtualThread.join();
-        assertTrue(virtualThread.isVirtual());
-        assertEquals("java.lang.VirtualThread", virtualThread.getClass().getName());
+    public void createPlatformThreadByBuilder() throws InterruptedException {
+        Thread thread = Thread.ofPlatform().start(() -> System.out.println("run"));
+        thread.join();
+
+        assertFalse(thread.isVirtual());
+        assertEquals("java.lang.Thread", thread.getClass().getName());
+    }
+
+    @Test
+    public void createVirtualThreadByStaticFactoryMethod() throws InterruptedException {
+        Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
+        thread.join();
+
+        assertTrue(thread.isVirtual());
+        assertEquals("java.lang.VirtualThread", thread.getClass().getName());
+    }
+
+    @Test
+    public void createVirtualThreadByBuilder() throws InterruptedException {
+        Thread thread = Thread.ofVirtual().start(() -> System.out.println("run"));
+        thread.join();
+
+        assertTrue(thread.isVirtual());
+        assertEquals("java.lang.VirtualThread", thread.getClass().getName());
     }
 }
