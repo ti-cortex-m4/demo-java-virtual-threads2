@@ -3,7 +3,7 @@
 
 ## Introduction
 
-Java _virtual threads_ are lightweight threads designed to develop _high-throughput_ concurrent applications. Pre-existing Java threads based on operating system (OS) threads proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the JVM cannot efficiently handle more than a few thousand threads.
+Java _virtual threads_ are lightweight threads designed to develop _high-throughput_ concurrent applications. Pre-existing Java threads were based on operating system (OS) threads that proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the JVM cannot efficiently handle more than a few thousand threads.
 
 If programmers continue to use threads as the concurrent model, they will severely limit the scalability of their applications. Alternatively, they can switch to other concurrent models (for example, callbacks, [futures](https://github.com/aliakh/demo-java-completablefuture/blob/master/readme.md), or reactive streams) that reuse threads between tasks without blocking them. Such solutions, while showing much better scalability, are much more difficult to write, debug, and understand.
 
@@ -59,6 +59,14 @@ Summary of quantitative differences between platform and virtual threads:
    </td>
   </tr>
   <tr>
+   <td>thread startup time
+   </td>
+   <td>~ N ms
+   </td>
+   <td>~ N µs
+   </td>
+  </tr>
+  <tr>
    <td>context switching time
    </td>
    <td>1-10 µs
@@ -68,6 +76,8 @@ Summary of quantitative differences between platform and virtual threads:
   </tr>
 </table>
 
+
+context switching: ~100µs (depends on the OS)
 
 The implementation of virtual threads consists of two parts: continuations and a scheduler.
 
@@ -165,7 +175,7 @@ Virtual threads are also preemptive: they do not need to explicitly yield to ret
 
 ### Write blocking synchronous code in the thread-per-task style
 
-Blocking a platform thread keeps the OS thread, a limited resource, from doing useful work. Therefore, non-blocking asynchronous frameworks have been developed to reduce thread blocking and increase CPU utilization. Such solutions, although they show much better performance, are nevertheless much more difficult to write, debug, and understand. Such frameworks that use their techniques of preventing thread blocking would not benefit much from using virtual threads.
+Blocking a platform thread is costly because it wastes a limited resource. Various asynchronous and reactive frameworks use tasks as more fine-grained units of concurrency instead of threads. These frameworks reuse threads without blocking them and indeed achieve higher application scalability. The price to pay for this is a significant increase in the complexity of application development. Since much of the Java platform assumes that execution context is embodied in a thread, all that context is lost once we dissociate tasks from threads. Debugging and profiling are difficult in such applications, and stack traces no longer provide useful information.
 
 In contrast, blocking a virtual thread is low-cost, and moreover, it is its main design feature. While the blocked virtual thread is waiting for the operation to complete, the carrier thread and the underlying OS thread are not blocked. This allows programmers to create simpler yet efficient concurrent code in the thread-per-task style.
 
