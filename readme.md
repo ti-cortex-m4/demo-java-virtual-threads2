@@ -3,11 +3,11 @@
 
 ## Introduction
 
-Java _virtual threads_ are lightweight threads designed to develop _high-throughput_ concurrent applications. Pre-existing Java threads were based on operating system (OS) threads that proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the JVM cannot efficiently handle more than a few thousand threads.
+Java _virtual threads_ (previously known as _fibers_) are lightweight threads designed to develop _high-throughput_ concurrent applications. Pre-existing Java threads were based on operating system (OS) threads that proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the OS and thresore the JVM cannot efficiently handle more than a few thousand threads.
 
-If programmers continue to use threads as the concurrent model, they will severely limit the scalability of their applications. Alternatively, they can switch to other concurrent models (for example, callbacks, [futures](https://github.com/aliakh/demo-java-completablefuture/blob/master/readme.md), or reactive streams) that reuse threads between tasks without blocking them. Such solutions, while showing much better scalability, are much more difficult to write, debug, and understand.
+Nowadays programmers have either the option to use threads as the units of concurrency and write synchronous blocking code. These applications would be easy to develop, but they will not be scalable, because they are limited by the capabilities of the OS. Or, they can use other concurrent models (futures, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while showing much better scalability, are much more difficult to write, debug, and understand.
 
-The purpose of virtual threads is to add lightweight, user-space threads managed by the JVM to be used alongside the existing heavyweight, kernel-space threads managed by the OS. Programmers can create millions of virtual threads and get much better throughput using much simpler synchronous blocking code.
+The purpose of virtual threads is to add lightweight, user-space threads managed by the JVM to be used alongside the existing heavyweight, kernel-space threads managed by the OS. Programmers can create millions of virtual threads and get much better scalability using much simpler synchronous blocking code.
 
 <sub>Virtual threads were added in Java 19 as a preview feature and released in Java 21.</sub>
 
@@ -61,9 +61,9 @@ Summary of quantitative differences between platform and virtual threads:
   <tr>
    <td>thread startup time
    </td>
-   <td>~ N ms
+   <td>> 1000 µs
    </td>
-   <td>~ N µs
+   <td>1-10 µs
    </td>
   </tr>
   <tr>
@@ -77,22 +77,34 @@ Summary of quantitative differences between platform and virtual threads:
 </table>
 
 
-context switching: ~100µs (depends on the OS)
-
 The implementation of virtual threads consists of two parts: continuations and a scheduler.
 
 Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may yield execution at some point by itself and pass control outside. When a continuation is resumed, control returns to the last yield point, with the execution context up to the entry point remaining intact. Continuation is a low-level construct implemented by the internal _jdk.internal.vm.Continuation_ class and developers should not use them directly.
 
-The virtual threads scheduler manages the yielding and resuming of the coroutines. It is pluggable, and a dedicated _ForkJoinPool_ FIFO executor is now used for this purpose.
+The virtual threads scheduler manages the yielding and resuming of the coroutines. The scheduler is pluggable, and a dedicated _ForkJoinPool_ FIFO executor is used by default. This scheduler is optimized for transactions that are typically short-lived and often blocked.
+
+Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the scheduler.
+
+When a virtual thread calls an blocking I/O method in the Java core library, the virtual threads scheduler:
 
 
-#### Carrier threads
 
-Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the scheduler. When the JVM schedules a virtual thread, it _mounts_ the virtual thread on a carrier thread. Today, most of the operations in the Java core library (mainly I/O and _java.util.concurrent_) have been refactored to make them non-blocking. When a virtual thread is blocked on such an operation, the scheduler dispatches the operation and then _unmounts_ the virtual thread from the carrier thread. While the blocking operation from the virtual thread proceeds in the background, the carrier thread is unblocked and can execute another virtual thread. When the operation completes, the scheduler mounts the virtual thread to an available carrier thread.
+* _unmounts_ the virtual thread from the carrier thread;
+* suspends the continuation and saves its content;
+* copies the stack frames of the virtual thread from the stack of the carrier thread to the heap;
+* start a non-blocking I/O operation in the OS kernel;
+* the scheduler can schedule another virtual thread on the same carrier thread.
 
-<sub>The stack of the virtual thread is copied from the heap to the stack of the carrier thread during mounting and is moved back to the heap during the unmounting.</sub>
+When the I/O operation completes in the OS kernel, the virtual threads scheduler:
 
-However, some operations in the Java core library do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a platform thread to the JVM scheduler.
+
+
+* copies the stack frames of the virtual thread from the heap to the stack of the carrier thread;
+* restores the content of the continuation and resumes it;
+* waits until a carrier thread is available;
+* _mounts_ the virtual thread to the carrier thread.
+
+To provide this no-blocking behavior, most of the blocking operations in the Java core library (mainly I/O and _java.util.concurrent_)  have been refactored. However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a platform thread to the JVM scheduler.
 
 A virtual thread also cannot be unmounted during blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a _native method,_ or a _foreign function_. During pinning, the JVM scheduler does not create an additional carrier thread, so frequent and long-lived pinning may worsen the scalability of the application.
 
@@ -170,14 +182,14 @@ Virtual threads almost entirely support the API and semantics of the pre-existin
 
 The platform threads are preemptive. The OS scheduler uses _time slices_ to periodically suspend and resume multiple platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress even if none of them explicitly returns control to the OS scheduler using the _Thread.yield()_ method.
 
-Virtual threads are also preemptive: they do not need to explicitly yield to return control to another thread. No known JVM scheduler uses time slices to interrupt a virtual thread to resume another virtual thread. A virtual thread returns control only if it is blocked on an I/O operation or other supported blocked operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_. You should currently only use platform threads for CPU-bound tasks.
+Virtual threads are not-preemptive. No known JVM scheduler uses time _slices_ to interrupt a virtual thread to resume another one. A virtual thread suspends only if it is blocked on an I/O or other supported blocked operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_. You should currently only use platform threads for CPU-bound tasks.
 
 
 ### Write blocking synchronous code in the thread-per-task style
 
-Blocking a platform thread is costly because it wastes a limited resource. Various asynchronous and reactive frameworks use tasks as more fine-grained units of concurrency instead of threads. These frameworks reuse threads without blocking them and indeed achieve higher application scalability. The price to pay for this is a significant increase in the complexity of application development. Since much of the Java platform assumes that execution context is embodied in a thread, all that context is lost once we dissociate tasks from threads. Debugging and profiling are difficult in such applications, and stack traces no longer provide useful information.
+Blocking platform threads is costly because it wastes a limited resource. Various asynchronous and reactive frameworks use tasks as more fine-grained units of concurrency instead of threads. These frameworks reuse threads without blocking them and indeed achieve higher application scalability. The price to pay for this is a significant increase in the complexity of application development. Since much of the Java platform assumes that execution context is embodied in a thread, all that context is lost once we dissociate tasks from threads. Debugging and profiling are difficult in such applications, and stack traces no longer provide useful information.
 
-In contrast, blocking a virtual thread is low-cost, and moreover, it is its main design feature. While the blocked virtual thread is waiting for the operation to complete, the carrier thread and the underlying OS thread are not blocked. This allows programmers to create simpler yet efficient concurrent code in the thread-per-task style.
+In contrast, blocking virtual threads is low-cost, and moreover, it is their main design feature. While the blocked virtual thread is waiting for the operation to complete, the carrier thread and the underlying OS thread are actually not blocked. This allows programmers to create simpler yet efficient concurrent code in the thread-per-task style. In addition, virtual threads almost fully support the syntax and semantics of the well-known _Thread_ class; there are not any new APIs developers have to learn.
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#write-blocking-synchronous-code-in-the-thread-per-task-style)
 
@@ -223,7 +235,7 @@ Sometimes, _scoped values_ may be a better alternative to thread-local variables
 
 To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace these _synchronized_ blocks and methods with _ReentrantLock_, which also guarantees mutually exclusive access.
 
-<sub>To identify pinning, you can use the JVM flag <em>-Djdk.tracePinnedThreads=full</em> when executing your application.</sub>
+To identify pinning, you can use the JVM option _-Djdk.tracePinnedThreads=(full|short)_ when executing your application. This option with parameter _full_ prints complete stack trace, and with parameter _short_ prints only stack frames with problematic code.
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-synchronized-blocks-and-methods-carefully-or-switch-to-reentrant-locks)
 
