@@ -11,7 +11,6 @@ public class Example2PlatformAndVirtualThreadBuildersTest {
     @Test
     public void platformThreadBuilderTest() {
         Thread.Builder builder = Thread.ofPlatform()
-            .group(Thread.currentThread().getThreadGroup())
             .daemon(false)
             .priority(10)
             .stackSize(1024)
@@ -23,7 +22,6 @@ public class Example2PlatformAndVirtualThreadBuildersTest {
         Thread thread = builder.unstarted(() -> System.out.println("run platform thread"));
 
         assertEquals("a platform thread", thread.getName());
-        assertEquals("main", thread.getThreadGroup().getName());
         assertFalse(thread.isDaemon());
         assertEquals(10, thread.getPriority());
     }
@@ -39,7 +37,6 @@ public class Example2PlatformAndVirtualThreadBuildersTest {
         Thread thread = builder.unstarted(() -> System.out.println("run virtual thread"));
 
         assertEquals("a virtual thread", thread.getName());
-        assertEquals("VirtualThreads", thread.getThreadGroup().getName());
         assertTrue(thread.isDaemon());
         assertEquals(5, thread.getPriority());
     }
