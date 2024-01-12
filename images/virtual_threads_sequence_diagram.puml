@@ -4,7 +4,7 @@ title virtual threads
 
 scale 1.0
 hide footbox
-!pragma teoz true
+'!pragma teoz true
 
 skinparam monochrome true
 skinparam defaultFontName Source Sans Pro
@@ -15,33 +15,34 @@ skinparam participantBackgroundColor #white
 skinparam noteBackgroundColor #white
 skinparam sequenceGroupBackgroundColor #white
 
-participant "virtual\nthread 1" as VirtualThread1
-participant "virtual\nthread 2" as VirtualThread2
-participant "carrier\nthread" as CarrierThread
-participant "operation\nsystem I/O" as Service
+participant "virtual\nthread" as VirtualThread1
+participant "continuation" as CarrierThread
+participant "operation\nsystem" as Service
 
-->> VirtualThread1: request 1
 activate VirtualThread1
+VirtualThread1->>CarrierThread : Continuation.run()
 activate CarrierThread
-VirtualThread1->>Service
-activate Service
+||20||
+VirtualThread1->>CarrierThread : Continuation.yield()
+CarrierThread->>VirtualThread1
+deactivate CarrierThread
 
-->> VirtualThread2: request 2
-activate VirtualThread2
-VirtualThread2->>Service
+||20||
+VirtualThread1->>Service
+deactivate VirtualThread1
 activate Service
 
 ||80||
 
 Service->>VirtualThread1
 deactivate Service
-<<- VirtualThread1: response 1
-deactivate VirtualThread1
+activate VirtualThread1
 
-Service->>VirtualThread2
-deactivate Service
-<<- VirtualThread2: response 2
+VirtualThread1->>CarrierThread : Continuation.run()
+activate CarrierThread
+||20||
+CarrierThread->>VirtualThread1
 deactivate CarrierThread
-deactivate VirtualThread2
+deactivate VirtualThread1
 
 @enduml
