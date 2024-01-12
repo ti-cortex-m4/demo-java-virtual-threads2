@@ -1,34 +1,32 @@
-# Introduction to Java virtual threads
+# Virtual threads in Java 21
 
 
 ## Introduction
 
 Java _virtual threads_ (previously known as _fibers_) are lightweight threads designed to develop _high-throughput_ concurrent applications. Pre-existing Java threads were based on operating system (OS) threads that proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the OS and therefore the JVM cannot efficiently handle more than a few thousand threads.
 
-Nowadays programmers can either use threads as the units of concurrency and write synchronous blocking code. These applications would be easy to develop, but they will not be scalable, because the number of OS threads is limited. Or, they can use other concurrent models (futures, async/await, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while indeed showing much better scalability, are much more difficult to write, debug, and understand.
+Currently, programmers can either use threads as the units of concurrency and write synchronous blocking code. These applications are easy to develop, but they are not scalable, because the number of OS threads is limited. Or, they can use other concurrent models (futures, async/await, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while showing much better scalability, are much more difficult to write, debug, and understand.
 
-Newly added lightweight, user-space _virtual _threads managed by the JVM, can be used alongside the existing heavyweight, kernel-space _platform_ threads managed by the OS. Programmers can create millions of virtual threads and get much better scalability using much simpler synchronous blocking code.
-
-<sub>Virtual threads were added in Java 19 as a preview feature and released in Java 21.</sub>
+New lightweight _virtual threads_ managed by the JVM, can be used alongside the existing heavyweight _platform threads_ managed by the OS. Programmers can create millions of virtual threads and get similar scalability using much simpler synchronous blocking code.
 
 <sub>All information in this article corresponds to the reference implementation in OpenJDK.</sub>
 
 
 ## Platform threads and virtual threads
 
-A thread is a _thread of execution_ in a program, that is an independently scheduled execution unit that belongs to a process in the OS. This entity has a program counter and stack. The _Thread_ class is a facade to manage threads of execution in the JVM. This class has fields, methods, and constructors. There are two kinds of threads, platform threads and virtual threads.
+A thread is a _thread of execution_ in a program, that is an independently scheduled execution unit that belongs to a process in the OS. This entity has a program counter and stack. The _Thread_ class is a wrapper in the JVM to manage threads of execution in the OS. This class has fields, methods, and constructors. There are two kinds of threads, platform threads and virtual threads.
 
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. A platform thread is connected to an OS thread for their entire lifetime. The OS schedules OS threads and therefore, platform threads. The operating system affects the thread creation time and the _context switching_ time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. (For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory). So, the number of available platform threads is limited to the number of OS threads. A JVM on a consumer-grade computer can support no more than a few thousand platform threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. The OS schedules OS threads and therefore, platform threads. The OS affects the thread creation time and the _context switching_ time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. (For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory). So, the number of available platform threads is limited to the number of OS threads. A JVM on a consumer-grade computer can support no more than a few thousand platform threads.
 
 >Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
 
 ### Virtual threads
 
-_Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ OS threads. Virtual threads are scheduled by the JVM, rather than the OS. A virtual thread is a regular Java object, so the thread creation time and thread switching time are negligible. The stack size of virtual threads is much smaller than for platform threads and is dynamically sized. Thus, the number of virtual threads does not depend on the limitations of the OS. A JVM on the same computer can support millions of virtual threads.
+_Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ OS threads. Virtual threads are scheduled by the JVM, rather than the OS. A virtual thread is a regular Java object, so the thread creation time and context switching time are negligible. The stack size of virtual threads is much smaller than for platform threads and is dynamically sized. Thus, the number of virtual threads does not depend on the limitations of the OS. A JVM on the same computer can support millions of virtual threads.
 
 >Virtual threads are suitable for executing tasks that spend most of the time blocked and are not intended for long-running CPU-intensive operations.
 
@@ -53,7 +51,7 @@ Summary of quantitative differences between platform and virtual threads:
    </td>
   </tr>
   <tr>
-   <td>thread metadata size
+   <td>metadata size
    </td>
    <td>> 2 KB
    </td>
@@ -61,7 +59,7 @@ Summary of quantitative differences between platform and virtual threads:
    </td>
   </tr>
   <tr>
-   <td>thread startup time
+   <td>startup time
    </td>
    <td>> 1000 µs
    </td>
@@ -81,9 +79,9 @@ Summary of quantitative differences between platform and virtual threads:
 
 The implementation of virtual threads consists of two parts: continuations and a scheduler.
 
-Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point by itself and pass control outside. When a continuation is resumed, control returns to the last suspending point, with the execution context up to the entry point remaining intact. Continuation is a low-level construct implemented by the internal _jdk.internal.vm.Continuation_ class and developers should not use them directly.
+Continuation (also known as _delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point and pass control outside. When a continuation is resumed, control returns to the last suspending point, with the last execution context. Continuation is a low-level construct implemented by the internal _jdk.internal.vm.Continuation_ class and developers should not use them directly.
 
-The scheduler manages the suspending and resuming of the coroutines. The scheduler is pluggable, and a dedicated _ForkJoinPool_ FIFO executor is used by default. This scheduler is optimized for transactions that are typically short-lived and often blocked.
+The scheduler manages the suspending and resuming of the coroutines. The scheduler is pluggable and a _ForkJoinPool_ FIFO executor is used by default.This scheduler is optimized for transactions that are typically short-lived and often blocked.
 
 The virtual threads scheduler contains a few platform threads used as _carrier threads_. By default, their initial number is equal to the number of available processors, and their maximum number is 256.
 
@@ -106,16 +104,16 @@ When the I/O operation completes in the OS kernel, the scheduler performs the op
 * waits until a carrier thread is available;
 * _mounts_ the virtual thread to the carrier thread.
 
-To provide this behavior, most of the blocking operations in the Java core library (mainly I/O and _java.util.concurrent_)  have been refactored. However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a platform thread to the JVM scheduler.
+To provide this behavior, most of the blocking operations in the Java core library (mainly I/O and _java.util.concurrent_) have been refactored. However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a platform thread to the JVM scheduler.
 
-A virtual thread also cannot be unmounted during blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a _native method,_ or a _foreign function_. During pinning, the JVM scheduler does not create an additional carrier thread, so frequent and long-lived pinning may worsen the scalability of the application.
+A virtual thread also cannot be unmounted during blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a _native method,_ or a _foreign function_. During pinning, the scheduler does not create an additional carrier thread, so frequent and long-lived pinning may worsen the scalability.
 
 
 ## How to use virtual threads
 
 The _Thread_ class has public constructors and the inner _Thread.Builder_ interface for creating and starting both platform and virtual threads.
 
-For backward compatibility, the public constructors of the _Thread_ class can create only platform threads. Virtual threads are instances of the nonpublic class _VirtualThread_ that cannot be instantiated directly. So, to create virtual threads you should use a builder that implements the _Thread.Builder.OfVirtual_ subinterface. By analogy, to create platform threads you should use a similar builder that implements the _Thread.Builder.OfPlatform_ subinterface. These builders are returned from static factory methods _Thread.ofVirtual()_ and _Thread.ofPlatform()_ respectively.
+For backward compatibility, the public constructors of the _Thread_ class can create only platform threads. Virtual threads are instances of the nonpublic class _VirtualThread_ that cannot be instantiated directly. So, to create virtual threads you should use a builder that implements the _Thread.Builder.OfVirtual_ sub-interface. By analogy, to create platform threads you should use a similar builder that implements the _Thread.Builder.OfPlatform_ sub-interface. These builders are returned from static factory methods _Thread.ofVirtual()_ and _Thread.ofPlatform()_ respectively.
 
 ![thread class diagram](/images/thread_class_diagram.png)
 
@@ -203,14 +201,14 @@ Virtual threads almost entirely support the API and semantics of the pre-existin
 
 The platform threads are preemptive. The OS scheduler uses _time slices_ to periodically suspend and resume multiple platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress even if none of them explicitly returns control to the OS scheduler using the _Thread.yield()_ method.
 
-Virtual threads are not-preemptive (see “Modern Operating Systems”, 4th edition, by Andrew S. Tanenbaum and Herbert Bos, 2015). A virtual thread suspends only if it is blocked on an I/O or other supported operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_. You should currently only use platform threads for CPU-bound tasks.
+Virtual threads are non-preemptive (see “Modern Operating Systems”, 4th edition, by Andrew S. Tanenbaum and Herbert Bos, 2015). A virtual thread suspends only if it is blocked on an I/O or other supported operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_. You should currently only use platform threads for CPU-bound tasks.
 
 
 ### Write blocking synchronous code in the thread-per-task style
 
 Blocking platform threads is costly because it wastes a limited resource. Various asynchronous frameworks use tasks as more fine-grained units of concurrency instead of threads. These frameworks reuse threads without blocking them and indeed achieve higher application scalability. The price to pay for this is a significant increase in the complexity of application development. Since much of the Java platform assumes that execution context is contained in a thread, all that context is lost once we decouple tasks from threads. Debugging and profiling are difficult in such asynchronous applications, and stack traces no longer provide useful information.
 
-In contrast, blocking virtual threads is low-cost, and moreover, it is their main design feature. While the blocked virtual thread is waiting for the operation to complete, the carrier thread and the underlying OS thread are actually not blocked. This allows programmers to create simpler yet efficient concurrent code in the thread-per-task style. In addition, virtual threads almost fully support the syntax and semantics of the well-known _Thread_ class; there are not any new APIs developers have to learn.
+In contrast, blocking virtual threads is low-cost, and moreover, it is their main design feature. While the blocked virtual thread is waiting for the operation to complete, the carrier thread and the underlying OS thread are actually not blocked. This allows programmers to create simpler yet efficient concurrent code in the thread-per-task style. In addition, virtual threads almost fully support the syntax and semantics of the well-known _Thread_ class.
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#write-blocking-synchronous-code-in-the-thread-per-task-style)
 
@@ -237,7 +235,7 @@ However, since there is no need to reuse virtual threads, there is no need to us
 
 To achieve better scalability of virtual threads, you should reconsider using _thread-local variables_ and _inheritable-thread-local variables_. Thread-local variables provide each thread with its copy of a variable, which is set to a value independent of the values set by other threads. A thread-local variable works as an implicit, thread-bound parameter and allows passing data from a caller to a callee through a sequence of intermediate methods.
 
-Virtual threads support thread-local behavior in the same way as platform threads. Because virtual threads can be very numerous, the following design features of thread-local variables can have a more significant negative effect:
+Virtual threads support thread-local behavior in the same way as platform threads. Because virtual threads can be very numerous, the following features of thread-local variables can have a more significant negative effect:
 
 
 
@@ -245,7 +243,7 @@ Virtual threads support thread-local behavior in the same way as platform thread
 * _unbounded lifetime_ (once a copy of a thread-local variable is set via the _set_ method, the value is retained for the lifetime of the thread, or until code in the thread calls the _remove_ method)
 * _expensive inheritance_ (each child thread copies, not reuses, _inheritable-thread-local variables_ of the parent thread)
 
-Sometimes, _scoped values_ may be a better alternative to thread-local variables, especially when using large numbers of virtual threads. Unlike a thread-local variable, a scoped value is written once, is available only for a bounded context, and is inherited in a _structured concurrency_ scope.
+Sometimes, _scoped values_ may be a better alternative to thread-local variables. Unlike a thread-local variable, a scoped value is written once, is available only for a bounded context, and is inherited in a _structured concurrency_ scope.
 
 <sub>Scoped values are a preview feature in Java 20 and have not been released at the time of writing.</sub>
 
@@ -254,7 +252,7 @@ Sometimes, _scoped values_ may be a better alternative to thread-local variables
 
 ### Use synchronized blocks and methods carefully or switch to reentrant locks
 
-To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace these _synchronized_ blocks and methods with _ReentrantLock_, which also guarantees mutually exclusive access.
+To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace _synchronized_ block or method with a _ReentrantLock_, which also guarantees mutually exclusive access.
 
 Running  your application with _-Djdk.tracePinnedThreads=full_ prints a complete stack trace when a thread blocks while pinned (highlighting native frames and frames holding monitors), running with _-Djdk.tracePinnedThreads=short_ prints just the problematic stack frames.
 
@@ -273,6 +271,6 @@ To summarize, these design features make virtual threads effective in these situ
 * the Java core library has been refactored to make most of the operations non-blocking
 * the virtual thread stack is much smaller and dynamically resizable
 
-Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. Considerable work has been done in the Java core library to make it compatible with virtual threads: refactored to make I/O and concurrent operations non-blocking, as well as getting rid of thread-local variables. Its pre-existing blocking code still behaves the same,but OS threads are not actually blocked. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party dependencies used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
+Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. Considerable work has been done in the Java core library to make it compatible with virtual threads: refactored to make I/O and concurrent operations non-blocking, as well as getting rid of thread-local variables. Its pre-existing blocking code still behaves the same, but OS threads are not actually blocked. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party dependencies used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
 
 Complete code examples are available in the [GitHub repository](https://github.com/aliakh/demo-java-virtual-threads).
