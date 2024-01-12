@@ -1,4 +1,4 @@
-# Virtual threads in Java 21
+# Introduction to Java virtual threads
 
 
 ## Introduction
@@ -79,7 +79,7 @@ Summary of quantitative differences between platform and virtual threads:
 
 The implementation of virtual threads consists of two parts: continuations and a scheduler.
 
-Continuation (also known as _delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point and pass control outside. When a continuation is resumed, control returns to the last suspending point, with the last execution context. Continuation is a low-level construct implemented by the internal _jdk.internal.vm.Continuation_ class and developers should not use them directly.
+Continuation (also known as _delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point and pass control outside. When a continuation is resumed, control returns to the last suspending point with the previous execution context. Continuation is a low-level construct implemented by the internal _jdk.internal.vm.Continuation_ class and developers should not use them directly.
 
 The scheduler manages the suspending and resuming of the coroutines. The scheduler is pluggable and a _ForkJoinPool_ FIFO executor is used by default.This scheduler is optimized for transactions that are typically short-lived and often blocked.
 
