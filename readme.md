@@ -5,7 +5,7 @@
 
 Java _virtual threads_ (previously known as _fibers_) are lightweight threads designed to develop _high-throughput_ concurrent applications. Pre-existing Java threads were based on operating system (OS) threads that proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the OS and thresore the JVM cannot efficiently handle more than a few thousand threads.
 
-Nowadays programmers have either the option to use threads as the units of concurrency and write synchronous blocking code. These applications would be easy to develop, but they will not be scalable, because they are limited by the capabilities of the OS. Or, they can use other concurrent models (futures, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while showing much better scalability, are much more difficult to write, debug, and understand.
+Nowadays programmers can either use threads as the units of concurrency and write synchronous blocking code. These applications would be easy to develop, but they will not be scalable, because they are limited by the capabilities of the OS. Or, they can use other concurrent models (futures, async/await, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while indeed showing much better scalability, are much more difficult to write, debug, and understand.
 
 The purpose of virtual threads is to add lightweight, user-space threads managed by the JVM to be used alongside the existing heavyweight, kernel-space threads managed by the OS. Programmers can create millions of virtual threads and get much better scalability using much simpler synchronous blocking code.
 
@@ -79,13 +79,13 @@ Summary of quantitative differences between platform and virtual threads:
 
 The implementation of virtual threads consists of two parts: continuations and a scheduler.
 
-Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may yield execution at some point by itself and pass control outside. When a continuation is resumed, control returns to the last yield point, with the execution context up to the entry point remaining intact. Continuation is a low-level construct implemented by the internal _jdk.internal.vm.Continuation_ class and developers should not use them directly.
+Continuation (_delimited continuation_ or _coroutine_) is a sequential code that may suspend execution at some point by itself and pass control outside. When a continuation is resumed, control returns to the last suspending point, with the execution context up to the entry point remaining intact. Continuation is a low-level construct implemented by the internal _jdk.internal.vm.Continuation_ class and developers should not use them directly.
 
-The virtual threads scheduler manages the yielding and resuming of the coroutines. The scheduler is pluggable, and a dedicated _ForkJoinPool_ FIFO executor is used by default. This scheduler is optimized for transactions that are typically short-lived and often blocked.
+The virtual threads scheduler manages the suspending and resuming of the coroutines. The scheduler is pluggable, and a dedicated _ForkJoinPool_ FIFO executor is used by default. This scheduler is optimized for transactions that are typically short-lived and often blocked.
 
 Many virtual threads employ a few platform threads used as _carrier threads_. Over its lifetime, a virtual thread may run on several different carrier threads. Those carrier threads belong to the scheduler.
 
-When a virtual thread calls an blocking I/O method in the Java core library, the virtual threads scheduler:
+When a virtual thread calls a blocking I/O method in the Java core library, the virtual threads scheduler:
 
 
 
@@ -99,7 +99,7 @@ When the I/O operation completes in the OS kernel, the virtual threads scheduler
 
 
 
-* copies the stack frames of the virtual thread from the heap to the stack of the carrier thread;
+* copies the_ _stack frames of the virtual thread from the heap to the stack of the carrier thread;
 * restores the content of the continuation and resumes it;
 * waits until a carrier thread is available;
 * _mounts_ the virtual thread to the carrier thread.
@@ -134,8 +134,13 @@ Thread.Builder builder = Thread.ofVirtual()
    .name("a virtual thread")
    .inheritInheritableThreadLocals(false)
    .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
-Thread thread = builder.start(() -> System.out.println("run"));
-thread.join();
+System.out.println(builder.getClass().getName()); // java.lang.ThreadBuilders$VirtualThreadBuilder
+
+Thread thread = builder.unstarted(() -> System.out.println("run"));
+
+assertEquals("a virtual thread", thread.getName());
+assertTrue(thread.isDaemon());
+assertEquals(5, thread.getPriority());
 ```
 
 
@@ -147,6 +152,10 @@ The _static factory method_ allows you to create a virtual thread with default p
 ```
 Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
 thread.join();
+
+assertTrue(thread.isVirtual());
+assertEquals("java.lang.VirtualThread", thread.getClass().getName());
+assertEquals("", thread.getName());
 ```
 
 
@@ -154,10 +163,16 @@ The _thread factory_ allows you to create virtual threads by specifying a _Runna
 
 
 ```
-Thread.Builder builder = Thread.ofVirtual();
+Thread.Builder builder = Thread.ofVirtual()
+   .name("a virtual thread");
+
 ThreadFactory threadFactory = builder.factory();
+System.out.println(threadFactory.getClass().getName()); // java.lang.ThreadBuilders$VirtualThreadFactory
+
 Thread thread = threadFactory.newThread(() -> System.out.println("run"));
-thread.join();
+
+assertEquals("a virtual thread", thread.getName());
+assertEquals(Thread.State.NEW, thread.getState());
 ```
 
 
@@ -166,6 +181,9 @@ The _executor service_ allows you to execute _Runnable_ and _Callable_ tasks in 
 
 ```
 try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+   System.out.println(executorService.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
+
+
    Future<?> future = executorService.submit(() -> System.out.println("run"));
    future.get();
 }
@@ -235,7 +253,7 @@ Sometimes, _scoped values_ may be a better alternative to thread-local variables
 
 To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace these _synchronized_ blocks and methods with _ReentrantLock_, which also guarantees mutually exclusive access.
 
-To identify pinning, you can use the JVM option _-Djdk.tracePinnedThreads=(full|short)_ when executing your application. This option with parameter _full_ prints complete stack trace, and with parameter _short_ prints only stack frames with problematic code.
+To identify pinning, you can use the system property jdk.tracePinnedThreads when starting your application. Running with _-Djdk.tracePinnedThreads=full_ prints a complete stack trace when a thread blocks while pinned, highlighting native frames and frames holding monitors, running with _-Djdk.tracePinnedThreads=short_ prints  just the problematic stack frames.
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-synchronized-blocks-and-methods-carefully-or-switch-to-reentrant-locks)
 

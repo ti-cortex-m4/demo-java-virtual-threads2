@@ -14,7 +14,7 @@ public class Example5VirtualThreadPerTaskExecutorTest {
         try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             System.out.println(executorService.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
 
-            Future<?> future = executorService.submit(() -> System.out.println("run virtual thread"));
+            Future<?> future = executorService.submit(() -> System.out.println("run"));
             future.get();
         }
     }
