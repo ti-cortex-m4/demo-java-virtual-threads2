@@ -101,11 +101,58 @@ A virtual thread also cannot be unmounted during blocking operations when it is 
 
 ## How to use virtual threads
 
-As platform threads, virtual threads are instances of the _java.lang.Thread_ class. To be exact, they are instances of the nonpublic class _java.lang.VirtualThread_ that cannot be instantiated directly. To create a virtual thread you should use a builder instead of constructors.
-
-The _Thread_ class has public constructors and the inner _Thread.Builder_ interface for creating and starting both platform and virtual threads. For backward compatibility, the public constructors of the _Thread_ class can create only platform threads. Virtual threads are instances of the nonpublic class _VirtualThread_ that cannot be instantiated directly. So, to create virtual threads you should use a builder that implements the _Thread.Builder.OfVirtual_ sub-interface. By analogy, to create platform threads you should use a similar builder that implements the _Thread.Builder.OfPlatform_ sub-interface. These builders are returned from static factory methods _Thread.ofVirtual()_ and _Thread.ofPlatform()_ respectively. To check whether a thread is a virtual thread, to the _Thread_ class was added the _boolean isVirtual()_ method.
+Мirtual threads are instances of the _java.lang.VirtualThread_ class, which is a subclass of the _java.lang.Thread_ class.
 
 ![thread class diagram](/images/thread_class_diagram.png)
+
+The _Thread_ class has public constructors and the inner _Thread.Builder_ interface for creating and starting both platform and virtual threads. For backward compatibility, the public constructors of the _Thread_ class can create only platform threads. Virtual threads are instances of the nonpublic class that cannot be instantiated directly. The only way to create virtual threads is to use a builder. A similar builder exists for creating platform threads.
+
+Summary of methods of the _Thread_ class to handle virtual and platform threads:
+
+
+<table>
+  <tr>
+   <td>Modifier and type
+   </td>
+   <td>Method
+   </td>
+   <td>Description
+   </td>
+  </tr>
+  <tr>
+   <td><em>boolean</em>
+   </td>
+   <td><em>isVirtual()</em>
+   </td>
+   <td>Returns <em>true</em> if this thread is a virtual thread.
+   </td>
+  </tr>
+  <tr>
+   <td><em>static Thread.Builder.OfVirtual</em>
+   </td>
+   <td><em>ofVirtual()</em>
+   </td>
+   <td>Returns a builder for creating a virtual <em>Thread</em> or <em>ThreadFactory</em> that creates virtual threads.
+   </td>
+  </tr>
+  <tr>
+   <td><em>static Thread.Builder.OfPlatform</em>
+   </td>
+   <td><em>ofPlatform()</em>
+   </td>
+   <td>Returns a builder for creating a platform <em>Thread</em> or <em>ThreadFactory</em> that creates platform threads.
+   </td>
+  </tr>
+  <tr>
+   <td><em>static Thread</em>
+   </td>
+   <td><em>startVirtualThread(Runnable)</em>
+   </td>
+   <td>Creates a virtual thread to execute a task and schedules it to execute. 
+   </td>
+  </tr>
+</table>
+
 
 There are four ways to create virtual threads:
 
