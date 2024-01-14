@@ -6,7 +6,7 @@ import java.util.concurrent.ThreadFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class /*TODO*/ Example4ThreadFactoryTest {
+public class Example4VirtualThreadFactoryTest {
 
     @Test
     public void virtualThreadFactory() {

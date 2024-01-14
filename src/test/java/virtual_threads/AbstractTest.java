@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.TimeUnit;
 
-public class /*TODO*/ AbstractTest {
+abstract public class AbstractTest {
 
     protected final Logger logger = LoggerFactory.getLogger(this.getClass());
 
