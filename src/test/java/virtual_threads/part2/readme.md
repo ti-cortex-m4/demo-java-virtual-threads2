@@ -9,17 +9,19 @@ The following non-blocking asynchronous code will not benefit much from using vi
 
 
 ```java
-CompletableFuture.supplyAsync(this::getPriceInEur) 
-   .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) 
-   .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) 
-   .whenComplete((grossAmountInUsd, t) -> { 
-       if (t == null) {
-           assertEquals(132, grossAmountInUsd);
-       } else {
-           fail(t);
-       }
-   })
-   .get(); 
+public void useAsynchronousCode() throws InterruptedException, ExecutionException {
+   CompletableFuture.supplyAsync(this::readPriceInEur)
+       .thenCombine(CompletableFuture.supplyAsync(this::readExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate)
+       .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + readTax(amount))))
+       .whenComplete((grossAmountInUsd, t) -> {
+           if (t == null) {
+               assertEquals(132, grossAmountInUsd);
+           } else {
+               fail(t);
+           }
+       })
+       .get();
+}
 ```
 
 
@@ -27,14 +29,16 @@ The following blocking synchronous code will benefit from using virtual threads 
 
 
 ```java
-try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); 
-   Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); 
-   int netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get(); 
+public void useSynchronousCode() throws InterruptedException, ExecutionException {
+   try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+       Future<Integer> priceInEur = executorService.submit(this::readPriceInEur);
+       Future<Float> exchangeRateEurToUsd = executorService.submit(this::readExchangeRateEurToUsd);
+       float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get();
 
-   Future<Integer> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
-   int grossAmountInUsd = netAmountInUsd * (1 + tax.get());
-   assertEquals(132, grossAmountInUsd);
+       Future<Float> tax = executorService.submit(() -> readTax(netAmountInUsd));
+       float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
+       assertEquals(132, grossAmountInUsd);
+   }
 }
 ```
 
@@ -46,8 +50,12 @@ The following code needlessly uses a cached thread pool executor to reuse virtua
 
 
 ```java
-try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
-   executorService.submit(() -> { sleep(1000); System.out.println("run"); });
+public void poolVirtualThreads() {
+   try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
+       System.out.println(executorService); // java.util.concurrent.ThreadPoolExecutor@f68f0dc
+
+       executorService.submit(() -> { sleep(1000); System.out.println("run"); });
+   }
 }
 ```
 
@@ -56,8 +64,12 @@ The following code correctly uses a _thread-per-task_ virtual thread executor to
 
 
 ```java
-try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   executorService.submit(() -> { sleep(1000); System.out.println("run"); });
+public void createVirtualThreadPerTask() {
+   try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+       System.out.println(executorService); // java.util.concurrent.ThreadPerTaskExecutor
+
+       executorService.submit(() -> { sleep(1000); System.out.println("run"); });
+   }
 }
 ```
 
