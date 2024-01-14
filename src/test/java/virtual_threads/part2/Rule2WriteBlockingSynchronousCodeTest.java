@@ -18,27 +18,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class /*TODO*/ Rule2WriteBlockingSynchronousCodeTest extends AbstractTest {
 
     @Test
-    public void blockingSynchronousCodeTest() throws ExecutionException, InterruptedException {
-        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-            long startMillis = System.currentTimeMillis();
-
-            Future<Float> future = executorService.submit(() -> {
-                int priceInEur = readPriceInEur();
-                float netAmountInUsd = priceInEur * readExchangeRateEurToUsd();
-                float tax = readTax(netAmountInUsd);
-                return netAmountInUsd * (1 + tax);
-            });
-
-            float grossAmountInUsd = future.get();
-            assertEquals(165, grossAmountInUsd);
-
-            long durationMillis = System.currentTimeMillis() - startMillis;
-            assertEquals(durationMillis, 10000, 100);
-        }
-    }
-
-    @Test
-    public void blockingAsynchronousCodeTest() throws InterruptedException, ExecutionException {
+    public void useSynchronousCodeTest() throws InterruptedException, ExecutionException {
         try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
             long startMillis = System.currentTimeMillis();
 
@@ -56,7 +36,7 @@ public class /*TODO*/ Rule2WriteBlockingSynchronousCodeTest extends AbstractTest
     }
 
     @Test
-    public void nonBlockingAsynchronousCodeTest() throws InterruptedException, ExecutionException {
+    public void useAsynchronousCodeTest() throws InterruptedException, ExecutionException {
         long startMillis = System.currentTimeMillis();
 
         CompletableFuture.supplyAsync(this::readPriceInEur)
