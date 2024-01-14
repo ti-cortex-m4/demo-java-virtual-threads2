@@ -1,9 +1,9 @@
-## How to properly use virtual threads
+## Code examples
 
 
 ### Write blocking synchronous code in the thread-per-task style
 
-The following non-blocking asynchronous code will not benefit much from using virtual threads, because the _CompletableFuture_ class already manages the blocking of the threads:
+The following non-blocking asynchronous code will not benefit much from using virtual threads, because the `CompletableFuture` class already reuses threads in its executor between the execution of stages:
 
 <sub>The following code is a simplified example of an asynchronous multistage workflow. First, we call two long-running methods that return a product price in the EUR and the EUR/USD exchange rate. Then we calculate the net product price from the results of these methods. Then we call the third long-running method that takes the net product price and returns the tax amount. Finally, we calculate the gross product price from the net product price and the tax amount.</sub>
 
@@ -47,7 +47,7 @@ The following code needlessly uses a cached thread pool executor to reuse virtua
 
 ```java
 try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
-   executorService.submit(() -> { sleep(1000); System.out.println("omega"); });
+   executorService.submit(() -> { sleep(1000); System.out.println("run"); });
 }
 ```
 
@@ -57,7 +57,7 @@ The following code correctly uses a _thread-per-task_ virtual thread executor to
 
 ```java
 try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   executorService.submit(() -> { sleep(1000); System.out.println("alpha"); });
+   executorService.submit(() -> { sleep(1000); System.out.println("run"); });
 }
 ```
 
@@ -78,7 +78,7 @@ public String useFixedExecutorServiceToLimitConcurrency() throws ExecutionExcept
 ```
 
 
-The following code, which uses a semaphore to limit concurrency when accessing some shared resource, will benefit from the use of virtual threads:
+The following code, which uses a `Semaphore` to limit concurrency when accessing some shared resource, will benefit from the use of virtual threads:
 
 
 ```java
@@ -173,7 +173,7 @@ public String useSynchronizedBlockForExclusiveAccess() {
 ```
 
 
-The following code uses a _ReentrantLock_ that does not cause pinning of virtual threads:
+The following code uses a `ReentrantLock` that does not cause pinning of virtual threads:
 
 
 ```java
