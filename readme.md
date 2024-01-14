@@ -77,7 +77,7 @@ Continuations are a sequential code that can suspend itself and later be resumed
 
 The scheduler executes the tasks of virtual threads on a pool of a few platform threads used as _carrier threads_. By default, their initial number is equal to the number of available hardware threads, and their maximum number is 256. The scheduler is pluggable, and by default JVM uses a _ForkJoinPool_ FIFO executor.
 
-When a virtual thread calls a blocking I/O method, the scheduler performs the following actions:
+When a virtual thread calls, for example, a blocking I/O method, the scheduler performs the following actions:
 
 
 
@@ -94,18 +94,18 @@ When the I/O operation completes in the OS kernel, the scheduler performs the op
 * waits until a carrier thread is available;
 * _mounts_ the virtual thread to the carrier thread.
 
-To provide this behavior, most of the blocking operations in the Java core library (mainly I/O and _java.util.concurrent_) have been refactored. However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a platform thread to the JVM scheduler.
+To provide this behavior, most of the blocking operations in the Java core library (mainly I/O and _java.util.concurrent_) have been refactored. However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the _Object.wait()_ method). The capture of an OS thread is compensated by temporarily adding a carrier thread to the JVM scheduler.
 
 A virtual thread also cannot be unmounted during blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a native method, or a foreign function. During pinning, the scheduler does not create an additional carrier thread, so frequent and long-lived pinning may worsen the scalability.
 
 
 ## How to use virtual threads
 
-Мirtual threads are instances of the _java.lang.VirtualThread_ class, which is a subclass of the _java.lang.Thread_ class.
+Virtual threads are instances of the nonpublic _java.lang.VirtualThread_ class, which is a subclass of the _java.lang.Thread_ class.
 
 ![thread class diagram](/images/thread_class_diagram.png)
 
-The _Thread_ class has public constructors and the inner _Thread.Builder_ interface for creating and starting both platform and virtual threads. For backward compatibility, the public constructors of the _Thread_ class can create only platform threads. Virtual threads are instances of the nonpublic class that cannot be instantiated directly. The only way to create virtual threads is to use a builder. A similar builder exists for creating platform threads.
+The _Thread_ class has public constructors and the inner _Thread.Builder_ interface for creating and starting both platform and virtual threads. For backward compatibility, all public constructors of the _Thread_ class can create only platform threads. Virtual threads are instances of the nonpublic class that cannot be instantiated directly. The only way to create virtual threads is to use a builder. A similar builder exists for creating platform threads.
 
 Summary of methods of the _Thread_ class to handle virtual and platform threads:
 
@@ -235,7 +235,7 @@ Virtual threads almost entirely support the API and semantics of the pre-existin
 
 The OS scheduler for platform threads is preemptive. The OS scheduler uses _time slices_ to periodically suspend and resume platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress even if none of them explicitly yields.
 
-The JVM scheduler for virtual threads is non-preemptive (see "Modern operating systems", 4th edition, by Andrew S. Tanenbaum and Herbert Bos, 2015). A virtual thread is suspended only if it is blocked on an I/O or other supported operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_.
+The JVM scheduler for virtual threads _is_ non-preemptive (see "Modern operating systems", 4th edition, by Andrew S. Tanenbaum and Herbert Bos, 2015). A virtual thread is suspended only if it is blocked on an I/O or other supported operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_.
 
 
 ### Write blocking synchronous code in the thread-per-task style
@@ -286,7 +286,7 @@ Sometimes, _scoped values_ may be a better alternative to thread-local variables
 
 To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace a _synchronized_ block or method with a _ReentrantLock_, which also guarantees mutually exclusive access.
 
-Running your application with _-Djdk.tracePinnedThreads=full_ prints a complete stack trace when a thread blocks while pinned (highlighting native frames and frames holding monitors), running with _-Djdk.tracePinnedThreads=short_ prints just the problematic stack frames.
+<sub>Running your application with <em>-Djdk.tracePinnedThreads=full</em> prints a complete stack trace when a thread blocks while pinned (highlighting native frames and frames holding monitors), running with <em>-Djdk.tracePinnedThreads=short</em> prints just the problematic stack frames.</sub>
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-synchronized-blocks-and-methods-carefully-or-switch-to-reentrant-locks)
 
@@ -303,6 +303,6 @@ To summarize, these design features make virtual threads effective in these situ
 * the Java core library has been refactored to make most of the operations non-blocking
 * the virtual thread stack is much smaller and dynamically resizable
 
-Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. The OpenJDK team has been working on preparing the JDK for virtual threads within the Project Loom for several years. The pre-existing blocking code in the Java core library still behaves the same way, but OS threads are not actually blocked. For your applications to benefit from using virtual threads, you need to follow known guidelines. Also, third-party libraries used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
+Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. The OpenJDK team has been working on preparing the JDK for virtual threads within the Project Loom for several years. The pre-existing blocking code in the Java core library still behaves the same way, but OS threads are not actually blocked. For your applications to benefit from using virtual threads, you need to follow the mentioned guidelines. Also, third-party libraries used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
 
 Complete code examples are available in the [GitHub repository](https://github.com/aliakh/demo-java-virtual-threads).
