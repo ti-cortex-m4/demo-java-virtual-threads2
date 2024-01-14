@@ -52,7 +52,7 @@ The following code needlessly uses a cached thread pool executor to reuse virtua
 ```java
 public void poolVirtualThreads() {
    try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
-       System.out.println(executorService); // java.util.concurrent.ThreadPoolExecutor@f68f0dc
+       System.out.println(executorService); // java.util.concurrent.ThreadPoolExecutor@cafebabe
 
        executorService.submit(() -> { sleep(1000); System.out.println("run"); });
    }
@@ -66,7 +66,7 @@ The following code correctly uses a _thread-per-task_ virtual thread executor to
 ```java
 public void createVirtualThreadPerTask() {
    try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-       System.out.println(executorService); // java.util.concurrent.ThreadPerTaskExecutor
+       System.out.println(executorService); // java.util.concurrent.ThreadPerTaskExecutor@cafebabe
 
        executorService.submit(() -> { sleep(1000); System.out.println("run"); });
    }
