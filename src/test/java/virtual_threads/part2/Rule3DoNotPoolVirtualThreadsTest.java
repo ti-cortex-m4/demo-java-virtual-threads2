@@ -12,11 +12,11 @@ public class Rule3DoNotPoolVirtualThreadsTest extends AbstractTest {
     public class Do {
 
         @Test
-        public void doNotPoolVirtualThreads() {
+        public void createVirtualThreadPerTask() {
             try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
                 System.out.println(executorService); // java.util.concurrent.ThreadPerTaskExecutor@23941fb4
 
-                executorService.submit(() -> { sleep(1000); System.out.println("alpha"); });
+                executorService.submit(() -> { sleep(1000); System.out.println("run"); });
             }
         }
     }
@@ -29,7 +29,7 @@ public class Rule3DoNotPoolVirtualThreadsTest extends AbstractTest {
             try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
                 System.out.println(executorService); // java.util.concurrent.ThreadPoolExecutor@f68f0dc[Running, pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0]
 
-                executorService.submit(() -> { sleep(1000); System.out.println("omega"); });
+                executorService.submit(() -> { sleep(1000); System.out.println("run"); });
             }
         }
     }
