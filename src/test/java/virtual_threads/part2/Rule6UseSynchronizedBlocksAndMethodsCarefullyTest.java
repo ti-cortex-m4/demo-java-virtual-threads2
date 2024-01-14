@@ -7,7 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class Rule6UseSynchronizedBlocksAndMethodsCarefullyTest {
 
     @Nested
-    public class Do {
+    public class DoNot {
 
         private final Object lockObject = new Object();
 
@@ -23,7 +23,7 @@ public class Rule6UseSynchronizedBlocksAndMethodsCarefullyTest {
     }
 
     @Nested
-    public class DoNot {
+    public class Do {
 
         private final ReentrantLock reentrantLock = new ReentrantLock();
 

@@ -11,7 +11,7 @@ import java.util.concurrent.Semaphore;
 public class Rule4UseSemaphoresInsteadOfFixedThreadPoolsTest {
 
     @Nested
-    public class Do {
+    public class DoNot {
 
         private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
@@ -26,7 +26,7 @@ public class Rule4UseSemaphoresInsteadOfFixedThreadPoolsTest {
     }
 
     @Nested
-    public class DoNot {
+    public class Do {
 
         private final Semaphore semaphore = new Semaphore(8);
 

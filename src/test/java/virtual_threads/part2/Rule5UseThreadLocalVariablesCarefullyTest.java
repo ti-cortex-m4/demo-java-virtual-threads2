@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class Rule5UseThreadLocalVariablesCarefullyTest {
 
     @Nested
-    public class Do {
+    public class DoNot {
 
         private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
 
@@ -38,7 +38,7 @@ public class Rule5UseThreadLocalVariablesCarefullyTest {
     }
 
     @Nested
-    public class DoNot {
+    public class Do {
 
         private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
 
