@@ -8,7 +8,7 @@ The following non-blocking asynchronous code will not benefit much from using vi
 <sub>The following code is a simplified example of an asynchronous multistage workflow. First, we call two long-running methods that return a product price in the EUR and the EUR/USD exchange rate. Then we calculate the net product price from the results of these methods. Then we call the third long-running method that takes the net product price and returns the tax amount. Finally, we calculate the gross product price from the net product price and the tax amount.</sub>
 
 
-```
+```java
 CompletableFuture.supplyAsync(this::getPriceInEur) 
    .thenCombine(CompletableFuture.supplyAsync(this::getExchangeRateEurToUsd), (price, exchangeRate) -> price * exchangeRate) 
    .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) 
@@ -26,7 +26,7 @@ CompletableFuture.supplyAsync(this::getPriceInEur)
 The following blocking synchronous code will benefit from using virtual threads because the much simpler code returns the same value for the same duration as the previous complex one:
 
 
-```
+```java
 try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
    Future<Integer> priceInEur = executorService.submit(this::getPriceInEur); 
    Future<Integer> exchangeRateEurToUsd = executorService.submit(this::getExchangeRateEurToUsd); 
@@ -45,7 +45,7 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
 The following code needlessly uses a cached thread pool executor to reuse virtual threads between tasks:
 
 
-```
+```java
 try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().factory())) {
    executorService.submit(() -> { sleep(1000); System.out.println("omega"); });
 }
@@ -55,7 +55,7 @@ try (var executorService = Executors.newCachedThreadPool(Thread.ofVirtual().fact
 The following code correctly uses a _thread-per-task_ virtual thread executor to create a new thread for each task:
 
 
-```
+```java
 try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
    executorService.submit(() -> { sleep(1000); System.out.println("alpha"); });
 }
@@ -68,7 +68,7 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
 The following code, which uses a fixed pool of threads to limit concurrency when accessing some shared resource, will not benefit from the use of virtual threads:
 
 
-```
+```java
 private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 
 public String useFixedExecutorServiceToLimitConcurrency() throws ExecutionException, InterruptedException {
@@ -81,7 +81,7 @@ public String useFixedExecutorServiceToLimitConcurrency() throws ExecutionExcept
 The following code, which uses a semaphore to limit concurrency when accessing some shared resource, will benefit from the use of virtual threads:
 
 
-```
+```java
 private final Semaphore semaphore = new Semaphore(8);
 
 public String useSemaphoreToLimitConcurrency() throws InterruptedException {
@@ -101,7 +101,7 @@ public String useSemaphoreToLimitConcurrency() throws InterruptedException {
 The following code shows that a thread-local variable is mutable, is inherited in a child thread started from the parent thread, and exists until it is removed.
 
 
-```
+```java
 private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
 
 public void useThreadLocalVariable() throws InterruptedException {
@@ -126,7 +126,7 @@ public void useThreadLocalVariable() throws InterruptedException {
 The following code shows that a scoped value is immutable, is reused in a structured concurrency scope, and exists only in a bounded context.
 
 
-```
+```java
 private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
 
 public void useScopedValue() {
@@ -162,7 +162,7 @@ public void useScopedValue() {
 The following code uses a _synchronized_ block with an explicit object lock that causes pinning of virtual threads:
 
 
-```
+```java
 private final Object lockObject = new Object();
 
 public String useSynchronizedBlockForExclusiveAccess() {
@@ -176,7 +176,7 @@ public String useSynchronizedBlockForExclusiveAccess() {
 The following code uses a _ReentrantLock_ that does not cause pinning of virtual threads:
 
 
-```
+```java
 private final ReentrantLock reentrantLock = new ReentrantLock();
 
 public String useReentrantLockForExclusiveAccess() {

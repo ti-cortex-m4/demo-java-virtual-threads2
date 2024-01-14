@@ -166,7 +166,7 @@ There are four ways to create virtual threads:
 The virtual _thread builder_ allows you to create a virtual thread with all available parameters: name, _inheritable-thread-local variables_ inheritance flag, uncaught exception handler, and _Runnable_ task. (Note that the virtual threads are _daemon_ threads and have a fixed thread priority that cannot be changed).
 
 
-```
+```java
 Thread.Builder builder = Thread.ofVirtual()
    .name("a virtual thread")
    .inheritInheritableThreadLocals(false)
@@ -186,7 +186,7 @@ assertEquals(5, thread.getPriority());
 The _static factory method_ allows you to create a virtual thread with default parameters by specifying only a _Runnable_ task. (Note that by default, the virtual thread name is empty).
 
 
-```
+```java
 Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
 thread.join();
 
@@ -198,7 +198,7 @@ assertEquals("", thread.getName());
 The _thread factory_ allows you to create virtual threads by specifying a _Runnable_ task to the instance of the _ThreadFactory_ interface. The parameters of virtual threads are specified by the current state of the thread builder from which this factory is created. (Note that the thread factory is thread-safe, but the thread builder is not).
 
 
-```
+```java
 Thread.Builder builder = Thread.ofVirtual()
    .name("a virtual thread");
 
@@ -215,7 +215,7 @@ assertEquals(Thread.State.NEW, thread.getState());
 The _executor service_ allows you to execute _Runnable_ and _Callable_ tasks in the unbounded, thread-per-task instance of the _ExecutorService_ interface.
 
 
-```
+```java
 try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
    System.out.println(executorService.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
 
