@@ -166,7 +166,7 @@ There are four ways to create virtual threads:
 The virtual _thread builder_ allows you to create a virtual thread with all available parameters: name, _inheritable-thread-local variables_ inheritance flag, uncaught exception handler, and `Runnable` task. (Note that the virtual threads are _daemon_ threads and have a fixed thread priority that cannot be changed).
 
 
-```java
+```
 Thread.Builder builder = Thread.ofVirtual()
    .name("a virtual thread")
    .inheritInheritableThreadLocals(false)
@@ -186,7 +186,7 @@ assertEquals(5, thread.getPriority());
 The _static factory method_ allows you to create a virtual thread with default parameters by specifying only a `Runnable` task. (Note that by default, the virtual thread name is empty).
 
 
-```java
+```
 Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
 thread.join();
 
@@ -198,7 +198,7 @@ assertEquals("", thread.getName());
 The _thread factory_ allows you to create virtual threads by specifying a `Runnable` task to the instance of the `ThreadFactory` interface. The parameters of virtual threads are specified by the current state of the thread builder from which this factory is created. (Note that the thread factory is thread-safe, but the thread builder is not).
 
 
-```java
+```
 Thread.Builder builder = Thread.ofVirtual()
    .name("a virtual thread");
 
@@ -215,7 +215,7 @@ assertEquals(Thread.State.NEW, thread.getState());
 The _executor service_ allows you to execute `Runnable` and `Callable` tasks in the unbounded, thread-per-task instance of the _ExecutorService_ interface.
 
 
-```java
+```
 try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
    System.out.println(executorService.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
 
@@ -233,9 +233,11 @@ Virtual threads almost entirely support the API and semantics of the pre-existin
 
 ### Do not use virtual threads for CPU-bound tasks
 
-The OS scheduler for platform threads is _preemptive_. The OS scheduler uses _time slices_ to periodically suspend and resume platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress even if none of them explicitly yields.
+The OS scheduler for platform threads is preemptive. The OS scheduler uses _time slices_ to periodically suspend and resume platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress even if none of them explicitly yields.
 
-The JVM scheduler for virtual threads is _non-preemptive_ (see "Modern operating systems", by Andrew S. Tanenbaum and Herbert Bos, 4th edition, 2015). A virtual thread is suspended only if it is blocked on an I/O or other supported operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_.
+The JVM scheduler for virtual threads _is_ non-preemptive<sup>*</sup>. A virtual thread is suspended, only if it is blocked on an I/O or other supported operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_.
+
+<sub>*see "Modern operating systems", by Andrew S. Tanenbaum and Herbert Bos, 4th edition, 2015</sub>
 
 
 ### Write blocking synchronous code in the thread-per-task style
@@ -260,7 +262,7 @@ Unlike creating platform threads, creating virtual threads is a fast process. Th
 
 The main purpose of thread pools is to reuse threads between executing multiple tasks. When tasks are submitted to a thread pool, they are inserted into a queue. Tasks are retrieved from the queue by worker threads for execution. An additional purpose of using thread pools with a _fixed number_ of worker threads can be to limit the concurrency of a particular operation. They can be used when an external resource cannot process more than a predefined number of concurrent requests.
 
-However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, it is better to use a `Semaphore` with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on it.
+However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead you should use a `Semaphore` with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on it.
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-semaphores-instead-of-fixed-thread-pools-to-limit-concurrency)
 
@@ -303,8 +305,6 @@ To summarize, these design features make virtual threads effective in these situ
 * the Java core library has been refactored to make most of the operations non-blocking
 * the virtual thread stack is much smaller and dynamically resizable
 
-Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. The OpenJDK team has been working on preparing the JDK for virtual threads for several years. The pre-existing blocking code in the Java core library still behaves the same way, but OS threads are not actually blocked.
-
-For your applications to benefit from using virtual threads, you need to follow the mentioned guidelines. Also, third-party libraries used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
+Java _virtual threads_ are a solution to achieve the same level of throughput that Golang is already demonstrating with its _goroutines_. The OpenJDK team has been working on preparing the JDK for virtual threads for several years. The pre-existing blocking code in the Java core library still behaves the same way, but OS threads are not actually blocked. For your applications to benefit from using virtual threads, you need to follow the mentioned guidelines. Also, third-party libraries used in your applications must be refactored by their owners or patched to become compatible with virtual threads.
 
 Complete code examples are available in the [GitHub repository](https://github.com/aliakh/demo-java-virtual-threads).
