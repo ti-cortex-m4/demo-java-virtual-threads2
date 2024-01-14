@@ -20,4 +20,11 @@ abstract public class AbstractTest {
     protected void sleep() {
         sleep(1000);
     }
+
+    protected <T> T sleepAndGet(int millis, T value) {
+        logger.info("{} started", value);
+        sleep(millis);
+        logger.info("{} finished", value);
+        return value;
+    }
 }

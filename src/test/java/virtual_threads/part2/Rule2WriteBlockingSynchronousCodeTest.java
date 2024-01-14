@@ -1,21 +1,17 @@
 package virtual_threads.part2;
 
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import virtual_threads.AbstractTest;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class /*TODO*/ Rule2WriteBlockingSynchronousCodeTest extends AbstractTest {
+public class Rule2WriteBlockingSynchronousCodeTest extends AbstractTest {
 
     @Test
     public void useSynchronousCodeTest() throws InterruptedException, ExecutionException {
@@ -28,7 +24,7 @@ public class /*TODO*/ Rule2WriteBlockingSynchronousCodeTest extends AbstractTest
 
             Future<Float> tax = executorService.submit(() -> readTax(netAmountInUsd));
             float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
-            assertEquals(165, grossAmountInUsd);
+            assertEquals(132, grossAmountInUsd);
 
             long durationMillis = System.currentTimeMillis() - startMillis;
             assertEquals(durationMillis, 8000, 100);
@@ -44,7 +40,7 @@ public class /*TODO*/ Rule2WriteBlockingSynchronousCodeTest extends AbstractTest
             .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + readTax(amount))))
             .whenComplete((grossAmountInUsd, t) -> {
                 if (t == null) {
-                    assertEquals(165, grossAmountInUsd);
+                    assertEquals(132, grossAmountInUsd);
                 } else {
                     fail(t);
                 }
@@ -64,13 +60,6 @@ public class /*TODO*/ Rule2WriteBlockingSynchronousCodeTest extends AbstractTest
     }
 
     private float readTax(float amount) {
-        return sleepAndGet(5000, 0.5f);
-    }
-
-    private <T> T sleepAndGet(int millis, T value) {
-        logger.info(value + " started");
-        sleep(millis);
-        logger.info(value + " finished");
-        return value;
+        return sleepAndGet(5000, 0.2f);
     }
 }
