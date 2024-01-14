@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class Rule2WriteBlockingSynchronousCodeTest extends AbstractTest {
+public class /*TODO*/ Rule2WriteBlockingSynchronousCodeTest extends AbstractTest {
 
     @Test
     public void blockingSynchronousCodeTest() throws ExecutionException, InterruptedException {

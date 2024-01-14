@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-public class Example5VirtualThreadPerTaskExecutorTest {
+public class /*TODO*/ Example5VirtualThreadPerTaskExecutorTest {
 
     @Test
     public void virtualThreadPerTaskExecutorTest() throws InterruptedException, ExecutionException {

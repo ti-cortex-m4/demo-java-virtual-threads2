@@ -6,7 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class Example1PlatformAndVirtualThreadsTest {
+public class /*TODO*/ Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createPlatformThreadByConstructor() throws InterruptedException {

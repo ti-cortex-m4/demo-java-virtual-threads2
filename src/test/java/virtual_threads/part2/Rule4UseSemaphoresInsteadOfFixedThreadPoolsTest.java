@@ -6,7 +6,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
-public class Rule4UseSemaphoresInsteadOfFixedThreadPoolsTest {
+public class /*TODO*/ Rule4UseSemaphoresInsteadOfFixedThreadPoolsTest {
 
     private final ExecutorService executorService = Executors.newFixedThreadPool(8);
 

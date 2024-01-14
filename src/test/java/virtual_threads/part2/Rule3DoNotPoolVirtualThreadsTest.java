@@ -5,7 +5,7 @@ import virtual_threads.AbstractTest;
 
 import java.util.concurrent.Executors;
 
-public class Rule3DoNotPoolVirtualThreadsTest extends AbstractTest {
+public class /*TODO*/ Rule3DoNotPoolVirtualThreadsTest extends AbstractTest {
 
     @Test
     public void doTest() {
