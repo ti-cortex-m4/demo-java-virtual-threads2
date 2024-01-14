@@ -6,10 +6,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class Rule6UseSynchronizedBlocksAndMethodsCarefullyTest {
 
-    private String exclusiveResource() {
-        return "result";
-    }
-
     @Nested
     public class Do {
 
@@ -19,6 +15,10 @@ public class Rule6UseSynchronizedBlocksAndMethodsCarefullyTest {
             synchronized (lockObject) {
                 return exclusiveResource();
             }
+        }
+
+        private String exclusiveResource() {
+            return "result";
         }
     }
 
@@ -34,6 +34,10 @@ public class Rule6UseSynchronizedBlocksAndMethodsCarefullyTest {
             } finally {
                 reentrantLock.unlock();
             }
+        }
+
+        private String exclusiveResource() {
+            return "result";
         }
     }
 }
