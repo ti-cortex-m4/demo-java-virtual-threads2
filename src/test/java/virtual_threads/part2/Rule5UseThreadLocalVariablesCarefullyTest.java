@@ -1,5 +1,6 @@
 package virtual_threads.part2;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.NoSuchElementException;
@@ -11,52 +12,60 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class /*TODO*/ Rule5UseThreadLocalVariablesCarefullyTest {
+public class Rule5UseThreadLocalVariablesCarefullyTest {
 
-    private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
+    @Nested
+    public class Do {
 
-    @Test
-    public void useThreadLocalVariable() throws InterruptedException {
-        threadLocal.set("zero");
-        assertEquals("zero", threadLocal.get());
-        threadLocal.set("one");
-        assertEquals("one", threadLocal.get());
+        private final InheritableThreadLocal<String> threadLocal = new InheritableThreadLocal<>();
 
-        Thread childThread = new Thread(() -> {
+        @Test
+        public void useThreadLocalVariable() throws InterruptedException {
+            threadLocal.set("zero");
+            assertEquals("zero", threadLocal.get());
+            threadLocal.set("one");
             assertEquals("one", threadLocal.get());
-        });
-        childThread.start();
-        childThread.join();
 
-        threadLocal.remove();
-        assertNull(threadLocal.get());
+            Thread childThread = new Thread(() -> {
+                assertEquals("one", threadLocal.get());
+            });
+            childThread.start();
+            childThread.join();
+
+            threadLocal.remove();
+            assertNull(threadLocal.get());
+        }
     }
 
-    private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
+    @Nested
+    public class DoNot {
 
-    @Test
-    public void useScopedValue() {
-        ScopedValue.where(scopedValue, "zero").run(
-            () -> {
-                assertEquals("zero", scopedValue.get());
-                ScopedValue.where(scopedValue, "one").run(
-                    () -> assertEquals("one", scopedValue.get())
-                );
-                assertEquals("zero", scopedValue.get());
+        private final ScopedValue<String> scopedValue = ScopedValue.newInstance();
 
-                try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
-                    scope.fork(() -> {
-                            assertEquals("zero", scopedValue.get());
-                            return -1;
-                        }
+        @Test
+        public void useScopedValue() {
+            ScopedValue.where(scopedValue, "zero").run(
+                () -> {
+                    assertEquals("zero", scopedValue.get());
+                    ScopedValue.where(scopedValue, "one").run(
+                        () -> assertEquals("one", scopedValue.get())
                     );
-                    scope.join().throwIfFailed();
-                } catch (InterruptedException | ExecutionException e) {
-                    fail(e);
-                }
-            }
-        );
+                    assertEquals("zero", scopedValue.get());
 
-        assertThrows(NoSuchElementException.class, scopedValue::get);
+                    try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+                        scope.fork(() -> {
+                                assertEquals("zero", scopedValue.get());
+                                return -1;
+                            }
+                        );
+                        scope.join().throwIfFailed();
+                    } catch (InterruptedException | ExecutionException e) {
+                        fail(e);
+                    }
+                }
+            );
+
+            assertThrows(NoSuchElementException.class, scopedValue::get);
+        }
     }
 }
