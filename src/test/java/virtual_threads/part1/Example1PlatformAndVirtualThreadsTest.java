@@ -6,11 +6,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class /*TODO*/ Example1PlatformAndVirtualThreadsTest {
+public class Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createPlatformThreadByConstructor() throws InterruptedException {
-        Thread thread = new Thread(() -> System.out.println("run platform thread"));
+        Thread thread = new Thread(() -> System.out.println("run"));
         thread.start();
         thread.join();
 
@@ -20,7 +20,7 @@ public class /*TODO*/ Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createPlatformThreadByBuilder() throws InterruptedException {
-        Thread thread = Thread.ofPlatform().start(() -> System.out.println("run platform thread"));
+        Thread thread = Thread.ofPlatform().start(() -> System.out.println("run"));
         thread.join();
 
         assertFalse(thread.isVirtual());
@@ -29,7 +29,7 @@ public class /*TODO*/ Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createVirtualThreadByStaticFactoryMethod() throws InterruptedException {
-        Thread thread = Thread.startVirtualThread(() -> System.out.println("run virtual thread"));
+        Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
         thread.join();
 
         assertTrue(thread.isVirtual());
@@ -39,7 +39,7 @@ public class /*TODO*/ Example1PlatformAndVirtualThreadsTest {
 
     @Test
     public void createVirtualThreadByBuilder() throws InterruptedException {
-        Thread thread = Thread.ofVirtual().start(() -> System.out.println("run virtual thread"));
+        Thread thread = Thread.ofVirtual().start(() -> System.out.println("run"));
         thread.join();
 
         assertTrue(thread.isVirtual());
