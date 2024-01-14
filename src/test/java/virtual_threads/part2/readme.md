@@ -14,7 +14,7 @@ CompletableFuture.supplyAsync(this::getPriceInEur)
    .thenCompose(amount -> CompletableFuture.supplyAsync(() -> amount * (1 + getTax(amount)))) 
    .whenComplete((grossAmountInUsd, t) -> { 
        if (t == null) {
-           assertEquals(108, grossAmountInUsd);
+           assertEquals(132, grossAmountInUsd);
        } else {
            fail(t);
        }
@@ -34,7 +34,7 @@ try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
 
    Future<Integer> tax = executorService.submit(() -> getTax(netAmountInUsd)); 
    int grossAmountInUsd = netAmountInUsd * (1 + tax.get());
-   assertEquals(108, grossAmountInUsd);
+   assertEquals(132, grossAmountInUsd);
 }
 ```
 

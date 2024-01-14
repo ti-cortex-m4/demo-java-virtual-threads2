@@ -14,25 +14,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class Rule2WriteBlockingSynchronousCodeTest extends AbstractTest {
 
     @Test
-    public void useSynchronousCodeTest() throws InterruptedException, ExecutionException {
-        try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-            long startMillis = System.currentTimeMillis();
-
-            Future<Integer> priceInEur = executorService.submit(this::readPriceInEur);
-            Future<Float> exchangeRateEurToUsd = executorService.submit(this::readExchangeRateEurToUsd);
-            float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get();
-
-            Future<Float> tax = executorService.submit(() -> readTax(netAmountInUsd));
-            float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
-            assertEquals(132, grossAmountInUsd);
-
-            long durationMillis = System.currentTimeMillis() - startMillis;
-            assertEquals(durationMillis, 8000, 100);
-        }
-    }
-
-    @Test
-    public void useAsynchronousCodeTest() throws InterruptedException, ExecutionException {
+    public void useAsynchronousCode() throws InterruptedException, ExecutionException {
         long startMillis = System.currentTimeMillis();
 
         CompletableFuture.supplyAsync(this::readPriceInEur)
@@ -49,6 +31,24 @@ public class Rule2WriteBlockingSynchronousCodeTest extends AbstractTest {
 
         long durationMillis = System.currentTimeMillis() - startMillis;
         assertEquals(durationMillis, 8000, 100);
+    }
+
+    @Test
+    public void useSynchronousCode() throws InterruptedException, ExecutionException {
+        try (var executorService = Executors.newVirtualThreadPerTaskExecutor()) {
+            long startMillis = System.currentTimeMillis();
+
+            Future<Integer> priceInEur = executorService.submit(this::readPriceInEur);
+            Future<Float> exchangeRateEurToUsd = executorService.submit(this::readExchangeRateEurToUsd);
+            float netAmountInUsd = priceInEur.get() * exchangeRateEurToUsd.get();
+
+            Future<Float> tax = executorService.submit(() -> readTax(netAmountInUsd));
+            float grossAmountInUsd = netAmountInUsd * (1 + tax.get());
+            assertEquals(132, grossAmountInUsd);
+
+            long durationMillis = System.currentTimeMillis() - startMillis;
+            assertEquals(durationMillis, 8000, 100);
+        }
     }
 
     private int readPriceInEur() {
