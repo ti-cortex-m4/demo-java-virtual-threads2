@@ -3,6 +3,7 @@ package virtual_threads.part2;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import virtual_threads.AbstractTest;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -14,9 +15,7 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class Rule2WriteBlockingSynchronousCodeTest {
-
-    private static final Logger logger = LoggerFactory.getLogger(Rule2WriteBlockingSynchronousCodeTest.class);
+public class Rule2WriteBlockingSynchronousCodeTest extends AbstractTest {
 
     @Test
     public void blockingSynchronousCodeTest() throws ExecutionException, InterruptedException {
@@ -93,13 +92,5 @@ public class Rule2WriteBlockingSynchronousCodeTest {
         sleep(millis);
         logger.info(value + " finished");
         return value;
-    }
-
-    private void sleep(int millis) {
-        try {
-            TimeUnit.MILLISECONDS.sleep(millis);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
     }
 }
