@@ -1,0 +1,1022 @@
+[Music]
+
+thank you
+
+hi I'm Ron Pressler I work in the Java
+
+platform group at Oracle that's the team
+
+that develops openjdk and I'm the
+
+technical lead for project Loom that
+
+produced user mode threads that made
+
+their way into jdk 19 released in
+
+September
+
+the purpose of this particular talk is
+
+to explain why we've added user mode
+
+threads to Java in other talks I've
+
+given uh one of them is linked on the
+
+last slide I talked more about why we
+
+decided to go with usmo threads as
+
+opposed to async await
+
+but this time I wanted to do something
+
+new and focus on why we did anything at
+
+all especially since this conference is
+
+devoted to Performance and there's some
+
+common misunderstanding over how user
+
+mode threads help performance
+
+now the target domain for user mode
+
+threads in Java or as we call them
+
+virtual threads in servers in particular
+
+and concurrency in general so before we
+
+go any further it is important to Define
+
+what we mean by concurrency especially
+
+in contrast to parallelism
+
+parallelism is the problem of
+
+accelerating the performance of a task
+
+that is reducing its latency by
+
+splitting it down into multiple subtasks
+
+and employing multiple processing
+
+resources to cooperate on completing
+
+them
+
+the source of the top tasks subtasks is
+
+internal they're created by the parallel
+
+algorithm
+
+concurrency contrast is a problem of
+
+scheduling to some set of resources many
+
+largely independent tasks that arrive
+
+from the outside
+
+and we're mostly interested in
+
+throughput or how many of these we can
+
+complete per time unit
+
+servers are a canonical example of
+
+concurrent programs and we'll be talking
+
+mostly about servers
+
+to understand the behavior of servers
+
+we'll use a famous result in operations
+
+research called literal's law or
+
+literal's theorem which is very simple
+
+to state but its proof is not trivial as
+
+it applies to stochastic or
+
+probabilistic systems like servers yet
+
+the result is independent of any
+
+probability distribution
+
+the theorem applies to any stable system
+
+a system for our purposes means some
+
+boundary with work items requests or
+
+customers that enter from the outside
+
+spend some time inside and then exit
+
+any means that we can draw the boundary
+
+arbitrarily wherever we please
+
+stable means that an ever-growing set of
+
+those items don't accumulate inside uh
+
+or in a queue on the boundary
+
+in other words that the number of work
+
+items here doesn't balloon forever but
+
+that things come in and then come out
+
+all the variables in the theorem refer
+
+to long-term averages where long term
+
+could mean some arbitrary time frame
+
+inside which we don't care about
+
+probabilistic fluctuations
+
+Lambda is the average rate at which
+
+items requests arrive at the system
+
+because the system is stable the rate at
+
+which they exit which we also call
+
+throughput must also equal Lambda
+
+obviously it can't be any higher or
+
+we'll have more things leaving than
+
+entering but it also can't be lower
+
+because that would mean that an
+
+ever-growing queue will form and the
+
+system will not be stable
+
+so in fact we can now think of the
+
+stable system as one where things enter
+
+and exit at the same average rate
+
+W is the average duration or latency
+
+that the items spend inside the
+
+boundaries of our system
+
+we can choose the boundaries to
+
+correspond to different kinds of
+
+latencies and Define the entry point and
+
+exit point to pick when we start and end
+
+measuring w
+
+L is the average number of requests that
+
+will be concurrently inside the
+
+boundaries of our system
+
+now given those definitions the theorem
+
+says that this equation holds L equals
+
+Lambda times w
+
+it holds in every stable system so if it
+
+ever doesn't the system isn't stable
+
+there are other ways of describing the
+
+the mental image conjugged by the
+
+theorem but they're all equivalent
+
+to get an intuition for why the theorem
+
+isn't affected by the distribution of
+
+requests let's imagine that the system
+
+is running at full capacity there are
+
+l-bar requests inside and no more can
+
+fit
+
+then if the average request rate is
+
+Lambda bar the implied maximum
+
+throughput the equation holds and the
+
+system is stable even if the request
+
+rate fluctuates and why is that
+
+if the rateer requests momentarily rises
+
+above Lambda bar a q will form on the
+
+system's boundary because no more
+
+requests can go inside
+
+the queue is not necessarily a fair 50q
+
+and it doesn't even have to be
+
+physically implemented that Q could just
+
+be people refreshing their browsers
+
+because they're HTTP requests are
+
+rejected it's just the set of requests
+
+or customers that are waiting to enter
+
+but because Lambda bar is the average if
+
+the rater request ever rises above it it
+
+is guaranteed to eventually fall below
+
+eight at which point the key will
+
+deplete and the system is indeed stable
+
+because there is no ever growing queue
+
+because Little's theorem applies to any
+
+system with arbitrarily drawn boundaries
+
+it applies to any subsystem s of a
+
+system S Prime
+
+importantly for a system to be stable
+
+all of its subsystems must be stable
+
+because if any of them weren't that
+
+would mean that they would form an
+
+ever-growing Queue at the entrance to it
+
+and So eventually there would be an
+
+ever-growing accumulation of items for
+
+the containing system as well
+
+now what happens if we choose to include
+
+a physical proper firefit queue inside
+
+the boundaries of S Prime
+
+with n being the average number of items
+
+in the queue
+
+first we have Lambda Prime equals Lambda
+
+because all the requests that make it
+
+into S Prime will end up in s
+
+next L Prime the average number of
+
+requests inside S Prime is equal to l
+
+plus n those inside S Plus those in the
+
+key finally we have W Prime equal to W
+
+plus n over L why because the request
+
+has to spend W time inside s and it has
+
+to wait for the N requests in the queue
+
+each will also spend W time inside s but
+
+we can think of them as doing it in
+
+batches of size l
+
+so we substitute and we see that n the Q
+
+cancels out from both sides of the
+
+equation
+
+the cue therefore might have a positive
+
+effect on fairness and so the experience
+
+of an individual user but it has no
+
+effect on the averages
+
+this means that we can exclude any cues
+
+from the analysis if it's convenient to
+
+do so without affecting the measures
+
+we're interested in
+
+we can also use little uh Little's law
+
+to consider cases where requests that
+
+hit a cache with probability P are very
+
+quick while those that miss it take
+
+longer and use that to size the cache
+
+appropriately for the system's capacity
+
+or we can use it to see the effect of
+
+interference among tasks meaning cases
+
+where the more requests that are in the
+
+system the more they interact and slow
+
+each other down
+
+and then see why in all well-functioning
+
+servers the interaction among tasks must
+
+be low that is why they must be largely
+
+independent I'm not going to spend any
+
+more time on this but you can go over
+
+the slide later
+
+and now let's make things more concrete
+
+and talk specifically about software
+
+servers
+
+an incoming request will spend some
+
+average duration W inside our server
+
+of course we try to reduce that duration
+
+as much as possible optimizing our
+
+latency but ultimately W depends on the
+
+inherent properties of our particular
+
+system the network topology the database
+
+latency the algorithmic work we need to
+
+do Etc
+
+and W becomes a constant of our system
+
+during that amount of time the request
+
+consume the resources memory CPU Network
+
+bandwidth DB connections Etc
+
+that resource consumption determines how
+
+many requests can live concurrently
+
+inside the system and that is our
+
+capacity L Bar and that capacity
+
+determines the maximum throughput Lambda
+
+bar that we can achieve
+
+specifically every request consumes some
+
+amount of CPU so let's start by
+
+considering just the CPU as our system
+
+the maximum capacity of requests inside
+
+the CPU is equal to the number of calls
+
+so if we have 30 calls and every request
+
+consumes an average of 100 microseconds
+
+of CPU time which is quite a lot and
+
+amounts to over 1500 cash misses
+
+then the CPU could handle a throughput
+
+of 30 000 requests per second
+
+to handle a higher throughput we need
+
+more capacity and we can do that by
+
+adding more servers remember that we can
+
+draw boundaries to include many servers
+
+and apply little serum to the entire
+
+cluster
+
+but service costs money and so we want
+
+to utilize each one as best as we can
+
+and that's the problem virtual threads
+
+aim to solve
+
+to see why that is let's delve deeper
+
+into how we write the server
+
+and what problem domain that of a server
+
+has a clear unit of concurrency meaning
+
+a task that is largely independent of
+
+others
+
+the request
+
+now Java was one of the first languages
+
+to have friends as part of its standard
+
+library and language specification and
+
+the thread is the platform's software
+
+unit of concurrency and the easiest
+
+approach in Java and languages like it
+
+is therefore to represent the domain
+
+unit of concurrency with the software
+
+unit of concurrency
+
+and that is the traditional style of
+
+writing servers called thread per
+
+request
+
+in that style a request is mapped to a
+
+thread for its entire duration
+
+now if every request consumes a thread
+
+for its duration then the average number
+
+of threads that will be used
+
+concurrently is equal to l
+
+even if our server implements a queue
+
+before assigning a threat to a request
+
+we can exclude it from our system with
+
+no effect on the metric we're interested
+
+in namely the number of threads because
+
+as we saw before the queue cancels out
+
+for the equation
+
+now the mapping between requests and
+
+threads in the third empirical style is
+
+not always exactly one-to-one
+
+sometimes in the premises of handling a
+
+request we need to make multiple
+
+outgoing requests to other services
+
+and we reduce the latency by issuing
+
+them in parallel which in this style is
+
+done on multiple threads
+
+but this reduces the latency by exactly
+
+the same amount in which it increases
+
+the number of threads
+
+and so it cancels out from the equation
+
+so for the purpose of estimating the
+
+number of threads we need we can
+
+consider W to be the duration that
+
+handling the request would take if it
+
+were all done in a Serial Fashion on a
+
+single thread
+
+so how many threads do we need to
+
+utilize the resources of the server if
+
+we consider the example we saw in the
+
+previous slide where a request consumes
+
+100 microseconds of CPU time and average
+
+which is quite High and the overall
+
+duration of the request is 10
+
+milliseconds which is quite low
+
+considering that it amounts of the sum
+
+of all the latencies of all the service
+
+and database calls we issue when
+
+processing the request then we need 100
+
+threads for every core of CPU we have
+
+conversely if we have only say 30
+
+threads per call for a total of about
+
+900 threads the several reach its
+
+maximum capacity at merely 30 CPU
+
+utilization which is indeed what we
+
+often see
+
+now
+
+in other scenarios that number uh could
+
+be as high as 1000 or even 10 000 uh
+
+threads per call required to make good
+
+use of the hardware and that is quite a
+
+lot of threads and when we consider that
+
+most threads are used by outgoing fan
+
+out schools and just perform a single
+
+HTTP request we expect those latter
+
+cases of 10 a thousand or ten thousand
+
+threads per call to be quite common and
+
+they are
+
+on top of that we need even more threads
+
+for programming convenience such as
+
+having a thread for writing and a thread
+
+for reading for each change to peer
+
+request
+
+and this is the problem the OS cannot
+
+support that number of frequently active
+
+threads
+
+so what do those who want to utilize
+
+their Hardware well do they abandon the
+
+thread per request style in favor of a
+
+style that does not represent the
+
+domain's unit of concurrency the request
+
+with a thread
+
+but rather with some other software
+
+needs the software unit of concurrency
+
+such as an asynchronous pipeline and
+
+that is the asynchronous style of
+
+programming
+
+but the asynchronous style brings its
+
+own host of serious problems
+
+that's because
+
+from the language through the libraries
+
+and all the way to the tools the Java
+
+platform is organized around threats
+
+the language's basic constructs have
+
+statement sequences loops metacles and
+
+exceptions are confined to a thread
+
+exception stack traces give us
+
+troubleshooting context in the form of a
+
+thread's call stack
+
+we use thread locals to give operations
+
+implicit context by attaching data to a
+
+thread
+
+when we debug we step through the
+
+execution of a thread and profilers
+
+group events by threads
+
+and we lose all that when we abandon the
+
+threat per request model in favor of the
+
+asynchronous code
+
+programmers were therefore facing a
+
+dilemma waste money on Hardware due to
+
+low utilization or waste money on
+
+development and maintenance due to a
+
+programming style that's
+
+disharmonious with the design of the
+
+platform
+
+the solution we've chosen for Java is
+
+the one chosen uh by erlang and go using
+
+both range that can be plentiful because
+
+that's what's required by Little's law
+
+to reach high throughput
+
+in Java we call these user mode threads
+
+virtual threads in a non-to virtual
+
+memory
+
+virtual threads are implemented by the
+
+Java runtime which knows how Java uses
+
+the stack and manages memory at a lower
+
+granularity than the OS can
+
+so instead of a couple thousand threads
+
+at the most we can have millions of them
+
+in the same process
+
+they can be so plentiful that we can
+
+create a new virtual thread for every
+
+concurrent operation even as small as a
+
+single outgoing HTTP core or a database
+
+query
+
+this removes the thread limitation L Bar
+
+while keeping the threadberry quest
+
+style which is the only style that's
+
+harmonious with the design of the
+
+platform and its tooling
+
+indeed when we compared a pool of os red
+
+to Virtual threads in a popular job
+
+server employing the thread Pro Quest
+
+Style
+
+we thought that the server destabilized
+
+and the exact moment literal's theorem
+
+predicted it would when the request
+
+rates reached the maximum number of
+
+threads divided by the request duration
+
+which in this case was 100 milliseconds
+
+uh 100 milliseconds or one tenth of a
+
+second
+
+of course eventually Hardware resources
+
+like gram CPU Network bandwidth are
+
+exhausted and if there is some
+
+interaction among requests things no
+
+longer scale linearly but we certainly
+
+have much more room to grow
+
+uh I've seen various discussions online
+
+where some people think that the
+
+performance benefit of user mode threads
+
+comes from having faster context
+
+switches so let's examine that
+
+a context switch occurs when an
+
+operation needs to wait for some
+
+external signal and so we schedule it
+
+from the CPU and change another in its
+
+state
+
+context switching directly impacts the
+
+latency w
+
+ool Simplicity let's assume that an
+
+average request is made up of some end
+
+blocking operations each incurs a weight
+
+for some external trigger like IO plus a
+
+contact switch
+
+therefore the impact of context switches
+
+on latency and throughput is the ratio
+
+between the average duration of a
+
+contact switch and the average wait time
+
+of course the context switch takes place
+
+on the CPU and so impact wcpu as well
+
+but still the overall impact is low in
+
+comparison to the orders of magnitude
+
+increase in thread capacity offered by
+
+user mode threads still virtual friends
+
+do have a faster context switch to know
+
+his threads and the structure
+
+concurrency API in jdk 19 also makes it
+
+easy to wait for multiple operations
+
+with a single contact switch
+
+finally another subject that frequently
+
+comes up when discussing using both
+
+threads is scheduling policy
+
+virtual threats are not cooperative
+
+in Cooperative scheduling the scheduling
+
+points or contact switch points the
+
+points where uh the points in the code
+
+where we just schedule a thread and
+
+schedule another are statically no
+
+in non-cooperative scheduling they can
+
+potentially happen anywhere
+
+The Cooperative model is less composable
+
+because adding a scheduling point to a
+
+subroutine might break the assumptions
+
+of all of its transitive coolers in the
+
+non-cooperative model if a subroutine
+
+wants to exclude other frames from
+
+interfering with some shared resource it
+
+can do that with a mutex
+
+however even though the Java runtime has
+
+the ability to preempt a running virtual
+
+thread at any point
+
+the virtual frame change alert does not
+
+currently use that power to implement
+
+time sharing
+
+time sharing is when the scheduler
+
+preempts a thread that's been using the
+
+CPU for some a lot to time share even in
+
+the middle of a loop performing uh some
+
+pure computation and there are two
+
+reasons for why we're not doing that yet
+
+first there's probably no urgency
+
+because people overestimate their
+
+Reliance on time sharing and service
+
+software
+
+in non-real-time kernels real-time
+
+kernels are a different matter time
+
+sharing is mostly an emergency measure
+
+and even the OS uses it mostly when the
+
+CPU is at 100 utilization
+
+people don't normally run their servers
+
+at 100 CPU for any extended duration and
+
+so they don't really rely on time
+
+sharing
+
+as they do try running this app it's 100
+
+CPU aren't particularly happy with its
+
+Behavior
+
+second deciding when and how to employ
+
+time sharing in a way that's actually
+
+useful is not easy when you have five
+
+orders of magnitude more threads than
+
+CPU cores
+
+the operational range at which time
+
+sharing could help is rather narrow in
+
+this case when the number of cpu-hungry
+
+threads is greater than a number of
+
+calls but not much greater and so we
+
+decided to gather more data and do more
+
+research on what problems people
+
+actually encounter in the field before
+
+adopting time sharing
+
+in summary the main quality that gives
+
+user mode friends uh their performance
+
+is not fast context switching but
+
+they're multitude
+
+and with that I am done and in the next
+
+slide you will find a couple of links
+
+for more information thank you
+
+[Music]
+
