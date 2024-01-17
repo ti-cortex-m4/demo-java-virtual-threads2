@@ -1,0 +1,3464 @@
+uh ron is a um
+
+technical lead on openjdk's project
+
+loom at oracle and
+
+what we have for you today is why user
+
+mode threads are often
+
+the right answer so thank you very much
+
+ron over to you
+
+uh thank you yes i've changed the title
+
+a little bit
+
+um right so um i'm ron presler i live in
+
+london
+
+and i work at oracle in the uh java
+
+platform group
+
+um this talk is about an ongoing project
+
+that i lead called project loom
+
+that aims to add user mode threads to
+
+java
+
+this is done by adding multi-prompt
+
+one-shot to limited continuations
+
+to their jvm and then implementing user
+
+mode threads in the standard library on
+
+top
+
+uh currently we don't expose the
+
+continuations directly to users for
+
+various reasons
+
+i'll explain later but uh
+
+before i begin uh i have a few general
+
+slides about java and its evolution to
+
+set the stage
+
+uh java is one of the world's most
+
+popular software platforms
+
+by some accounts it's number one in
+
+professional use but
+
+all ratings place it in the top three
+
+these days
+
+it's motivation called java se and has
+
+a reference implementation which is also
+
+the most commonly used one
+
+called open jdk developed primarily by
+
+oracle although many other companies
+
+contribute and or distribute builds of
+
+it
+
+the java platform consists of a language
+
+also called java
+
+a large standard library a virtual
+
+machine
+
+and a sense of observability interfaces
+
+and tools which consist
+
+of a tooling interface for debuggers a
+
+very powerful
+
+built-in low overhead profiling
+
+mechanism and
+
+monitoring and control interfaces
+
+the java language makes up a small
+
+platform only about
+
+two percent of the code uh and most of
+
+our investment
+
+also focuses on the platform rather than
+
+language
+
+in fact when i say java i mean the
+
+platform and when i talk specifically
+
+about language
+
+i'll say the java language unless it's
+
+very clear from context
+
+an important part of our philosophy is
+
+that software is much more than code
+
+and the developers view and interaction
+
+with it is much bigger than
+
+the editor uh this might be because of
+
+early small talk
+
+influences on the design of the platform
+
+so
+
+we look software over time as it evolves
+
+and as it runs now we also place a big
+
+emphasis on performance
+
+but what we mean by that uh will be
+
+important to uh
+
+for a subject first uh we care more
+
+about
+
+making it easy to get to 90 95 percent
+
+of optical performance
+
+rather than making it possible to get to
+
+100 percent
+
+uh second we care much more about
+
+amortized
+
+or even average performance than the
+
+worst case
+
+this means that all through the stack we
+
+rely on common fast bars
+
+and uncommon slow parts lastly we
+
+we're generally happy to trade
+
+footprints for speed
+
+uh james gosling java's original
+
+designer
+
+said he views the platform as a wolf in
+
+sheep's clothing
+
+uh the runtime and the vm in particular
+
+is quite adventurous
+
+and to this day is state of the art when
+
+it comes to compilation garbage
+
+collection
+
+and low overhead de-profiling but
+
+it is wrapped in a conservative language
+
+that's meant to be non-threatening
+
+and is often the last mover ideas are
+
+adopted only after they've been tried
+
+and tested in other languages
+
+as an aside i should say that most of
+
+the language features added since java
+
+1.0
+
+have been heavily influenced by ml to
+
+the point
+
+and this is going to sound a bit
+
+controversial that i think that in a
+
+year or two
+
+java could almost be considered animal
+
+[Music]
+
+java very quickly became very popular
+
+and for a time
+
+in the first half of the ortiz it was
+
+even dominant in a way
+
+that wasn't only anomalous compared to
+
+the rest of its timeline
+
+but even two programming languages in
+
+general uh then
+
+it experienced a marked decline in
+
+investment and innovation in sun's dying
+
+years
+
+but after the acquisition by oracle
+
+investment in the platform has gone up
+
+gradually
+
+the increased investment has led to big
+
+changes in the platform and the language
+
+including a new low latency gc and the
+
+introduction low overhead profiling
+
+mechanism
+
+but i want to focus on those that
+
+involve user-facing aspects of the
+
+language and
+
+runtime to show how this evolution takes
+
+place
+
+in a popular mainstream platform of
+
+course because
+
+java isn't a research platform all
+
+changes are made because of some
+
+perceived market need
+
+the first bit change back in the java 8
+
+days
+
+was the addition of lambdas now rather
+
+than introduce a structural function
+
+type
+
+which would have or other types which
+
+would have created a schism between old
+
+code and new code
+
+lambdas are just syntax for
+
+instantiating single abstract method
+
+interfaces
+
+so that all existing code which takes
+
+such interfaces
+
+interface instances as arguments and
+
+there was lots of it
+
+now takes landers project amber
+
+as algebraic data types uh most of it
+
+has been delivered
+
+where product types are nominal reco
+
+record classes
+
+which similarly to enums provide a
+
+succinct
+
+uh syntax and semantic guarantees for
+
+classes with
+
+two polite semantics uh but
+
+they're still a special case of classes
+
+while some types are represented by
+
+by sealed class or interface hierarchies
+
+with exhaustive matching and pattern
+
+matches which brings us to patterns and
+
+in particular deconstructing patterns
+
+that will probably be delivered in a
+
+year or so
+
+they don't only work in product types
+
+but are almost
+
+a first class concept that's a duel to
+
+methods
+
+the goal is to even have very addict
+
+deconstruction patterns for say
+
+regexes without special language support
+
+and to generalize all existing variable
+
+declarations
+
+at least for locals and parameters to
+
+say that actually
+
+any such existing declaration is a
+
+special case of pattern application
+
+then we have project valhalla adding
+
+inlineable objects so
+
+arrays of structs and specialized
+
+generics for them
+
+and here too we're going back and saying
+
+that the existing primitives
+
+in double etc are actually just special
+
+cases of so-called
+
+primitive classes that can be
+
+user-defined
+
+these projects all aim to make java more
+
+attractive for processing data
+
+uh which brings us to concurrency
+
+project loom which has ended up
+
+as we'll see as a generalization of
+
+threads
+
+uh it is also in the purview of the
+
+project to add explicit table
+
+optimization but that will come after
+
+we've delivered a
+
+lightweight concurrency so as you can
+
+see there's a big focus
+
+on forward compatibility namely letting
+
+existing code
+
+take advantage of new features with
+
+little or no change
+
+and at least we prefer adding features
+
+in a way that makes them a
+
+generalization
+
+of existing ones so we don't get a sharp
+
+divide between
+
+old and new code
+
+so the problem project loom aims to
+
+address is that today java developers
+
+writing servers need to make a choice
+
+they can write synchronous code that's
+
+harmonious with the platform but make
+
+suboptimal use of hardware
+
+because open jdk spreads are just
+
+wrappers around os
+
+spreads which are a precious resource
+
+much more so than say sockets or
+
+they can write asynchronous code making
+
+use of asynchronous apis
+
+which gives them a good hardware
+
+utilization but the result
+
+is disharmonious with the platform in
+
+its tooling meaning you can't easily set
+
+through such code in the debugger
+
+the profilers can't group operations by
+
+logical tasks etc
+
+and that makes development observation
+
+and maintenance harder
+
+in short they're faced with a choice of
+
+wasting money on hardware
+
+or in development the idea is to
+
+eliminate this dilemma by providing some
+
+abundant and cheap
+
+thread-like construct that will utilize
+
+hardware well
+
+but will also be harmonious with the
+
+platform's design
+
+uh the question we first have to answer
+
+is what is that contract
+
+now we're going to be talking about
+
+concurrency so i will
+
+be defining it in two ways and i hope
+
+that the practical differences between
+
+the two
+
+will become clear later
+
+from the algorithmic perspective
+
+concurrency is the algorithmic problem
+
+of scheduling or assigning a largely
+
+independent set of tasks to a usually
+
+smaller set of computational resources
+
+and the performance metric of interest
+
+to us is throughput
+
+this can be contrasted with the
+
+algorithmic problem of parallelism
+
+where we have just one task and we want
+
+to make it faster by splitting it
+
+into cooperating subtasks that exploit
+
+multiple processing units
+
+now from the syntactic perspective
+
+concurrency is a problem for how to
+
+express some arbitrary combination of
+
+sequential and parallel compositions
+
+of course in some imperative language
+
+with primitives for message passing io
+
+etc
+
+so concurrency from this perspective is
+
+the problem of creating language
+
+where you can write something like this
+
+or analogous to this
+
+now i'll define a process generally as
+
+some sequential thing and of course
+
+sequentially composing processors also
+
+gives us the process
+
+but it is important to remember that a
+
+process
+
+is not just some abstract programming
+
+language concept
+
+but also a running application's natural
+
+unit of concurrency
+
+it is an organizing construct for
+
+troubleshooting context
+
+debuggers and profilers
+
+now what about a thread
+
+so a thread is a kind of process that
+
+are defined as being what we normally
+
+associate with threads in our
+
+programming languages
+
+a process that has the concept of the
+
+call stack
+
+each subroutine is itself a process and
+
+its own state machine
+
+right when we return to a cooler we
+
+ladder to state that some composition of
+
+the subroutine state before the call
+
+as well as their return value from the
+
+core lee and this combination of
+
+individual processes
+
+is the process we call a threat now what
+
+does it mean to implement threats
+
+it means implementing a scheduler and
+
+that's the mechanism that decides
+
+when and how to assign the threats to
+
+processes
+
+and it means uh refining the state of
+
+the thread in some data structure
+
+that allows scheduling the thread by
+
+suspending and resuming it
+
+what does that data structure looks like
+
+uh well
+
+it's a stack that represents the state
+
+of each of the subroutines
+
+each of those sub-states that contains
+
+the sub-machine's local data
+
+as well as its program counter is called
+
+a frame
+
+the operating system provides us with
+
+one implementation of threads
+
+but there's a good reason to implement
+
+them in user mode
+
+why exactly we'll get to that later
+
+now some programming languages have a
+
+different syntactic construct
+
+that we can call syntactic stackless
+
+co-routines and is collectively
+
+known as async weight i'll assume you
+
+know how it works
+
+if not you can look it up uh but if we
+
+look at the semantics of async await
+
+we see that uh we get the exact same
+
+picture as we do for threads
+
+but this construct is completely
+
+syntactically disjoint from phrase
+
+and ordinary subroutines and these code
+
+units those syntactic
+
+stackless carouse can only be mixed in
+
+very specific ways if we want them to
+
+work
+
+as well as expected to use it we need a
+
+duplicate set of apis
+
+for io and synchronization to do the the
+
+exact same thing
+
+as their thread counterparts but they
+
+live in a syntactically separate world
+
+so the question is why would we even
+
+consider a distinct syntactic construct
+
+to express the same semantic idea as uh
+
+as one that most languages already have
+
+well there are some differences the
+
+first is an actual
+
+behavioral difference friends and async
+
+awaits have a different default when it
+
+comes to scheduling points
+
+for threads the scheduler is allowed to
+
+interleave another thread
+
+anywhere except we're explicitly
+
+forbidden with a critical section
+
+expressed as a block with async await
+
+such interleavings happen nowhere except
+
+we're explicitly allowed with a weight
+
+now personally i think that the former
+
+is the better default because
+
+correctness of concurrent code
+
+depends on assumptions around atomicity
+
+and it allows a caller to explicitly
+
+state
+
+its atomicity assumptions well if you
+
+want to add a scheduling point in async
+
+weight you must examine whether you're
+
+breaking some correctness assumption
+
+in all callers or whether they just
+
+happen to be atomic because it's a
+
+default
+
+but regardless of your personal
+
+preference many languages
+
+already have threads so adding so
+
+scheduling points can happen anywhere
+
+anyway so adding a construct
+
+with different rules only complicates
+
+matters
+
+but javascript for example had just one
+
+thread
+
+when the async await construct was
+
+introduced so
+
+all existing code had been written under
+
+the assumption
+
+that that uh scheduling points happened
+
+nowhere
+
+so when they added concurrency uh their
+
+concurrency construct they naturally
+
+preferred
+
+a model where atomicity is a default
+
+because all the existing code relied on
+
+it
+
+another difference is in the
+
+implementation to implement threads in
+
+user mode
+
+requires refine their state which means
+
+manipulating frames
+
+dude officially requires integrating
+
+with a representation of the ordinary
+
+subroutine stack frames
+
+which usually requires access to the
+
+compiler's back end
+
+on the other hand his async await is a
+
+completely separate construct
+
+all that's required for an efficient
+
+implementation is control over the
+
+compiler's front end
+
+uh they can compile one of those units
+
+not to a single subroutine
+
+but to something else maybe several
+
+inter-related subroutines or maybe even
+
+compiling
+
+multiple units into a single subroutine
+
+with
+
+various jumps inside now some languages
+
+don't have control of the vacuums and
+
+access to the representation of
+
+submarine frames
+
+so they simply have no choice uh
+
+one such example is kotlin that compiles
+
+to java bytecode but has no access to
+
+legit's backend
+
+and no control over the design of vm to
+
+a certain extent
+
+uh this also has an impact on rust which
+
+targets lvm and web assembly
+
+but has more influence over them than
+
+colton has over the jvm
+
+but perhaps the most interesting
+
+difference to language implementers
+
+it has to do with operations that we
+
+expect
+
+to be available in threads but which
+
+means that the maximal size of the stack
+
+cannot be statically determined
+
+namely recursion and virtual calls and
+
+also ffi
+
+because async awaits is a new construct
+
+we can exclude those features
+
+but on friends to support them we either
+
+need very large stacks
+
+which is how the os does it and as we'll
+
+see shortly is the main reason we want
+
+to use the mode for instance in the
+
+first place
+
+or we need resizable stacks now it's
+
+true
+
+that virtual memory means that os
+
+threatened stacks are effectively
+
+growable
+
+but they can't really shrink and
+
+committing memories done as a page
+
+granularity
+
+which is to course so if you want user
+
+mode threads
+
+we don't want large stacks which means
+
+we need resizable
+
+a resizable stack and this has several
+
+implications
+
+first allocations can happen in
+
+non-obvious places
+
+and might be frequent so this may be
+
+less convenient or even less efficient
+
+in environments without a gc
+
+second resizing stacks means moving them
+
+in memory which means that it's best if
+
+we have no
+
+pointers pointing in the stack at all um
+
+but even if we do and we can track them
+
+uh we still have the problem of ffi
+
+frames
+
+on resizable stacks those reasons
+
+because we don't know where those
+
+pointed pointers
+
+are so languages like c
+
+plus plus and rust which rely on manual
+
+memory management
+
+um and they have lots of pointers into
+
+the stack and have lots of vetify calls
+
+uh prefer an async weight mechanism that
+
+also allows them to exclude
+
+or restrict virtual calls and recursion
+
+inside that async white construct
+
+and get a small constant size stack
+
+that is statically determined
+
+in languages where resizable stacks
+
+might incur a higher
+
+context switching overhead than constant
+
+size stacks due to
+
+allocation costs or internal points of
+
+fixing there is a performance reason to
+
+prefer async await
+
+but i'd like to show why i think it is
+
+uh often not a good one
+
+the algorithmic and syntactic definition
+
+definitions of concurrency that i've
+
+given
+
+don't perfectly coincide there are
+
+situations
+
+where we'd like to express things using
+
+parallel compositions
+
+but don't involve the problem of
+
+scheduling competing tasks to a set of
+
+resources
+
+uh for example updating game entities
+
+say each represented by as
+
+a process in a simulation frame
+
+algorithmically this is a parallelism
+
+problem not a concurrency problem
+
+another is generators uh which are
+
+represented by
+
+exactly two processes exchanging
+
+messages as if
+
+on an unbuffered channel looking at the
+
+performance
+
+of the generators example if we take the
+
+cost of producing an item and consuming
+
+an item to be close to zero
+
+then the performance impact of context
+
+switching between the two processes is
+
+close to 100
+
+to 100 uh thankfully we can reduce its
+
+actual cost to virtually zero
+
+uh for one the data for the two
+
+processors
+
+fits in the cache because it's only two
+
+so if we switch between them by
+
+switching some pointer say the rsp
+
+register
+
+the cost is just that of changing a
+
+register
+
+but we can even do better than that
+
+because the call site is
+
+monomorphic we can inline and compile
+
+both processes into a single subroutine
+
+with
+
+jumps in it so if in our language having
+
+resizable stacks
+
+costs any more than virtually zero we
+
+can lose a lot
+
+in this particular scenario but let's
+
+look at algorithmic concurrency and
+
+examine its most common case
+
+that of transaction processing on a
+
+server
+
+the performance measure we care about is
+
+throughput and the behavior of the
+
+system
+
+when it is stable meaning request stone
+
+pile up in the queue
+
+is given by little's law that says that
+
+the average level of concurrency
+
+or number of requests being concurrently
+
+handled
+
+is equal to uh the mean rates of arrival
+
+lambda
+
+times the mean latency of handling each
+
+request w
+
+now there's a nuance here we can reduce
+
+w
+
+by splitting the work we need to do to
+
+handle requests say
+
+contacting multiple microservices over
+
+the network
+
+into separate tasks that we then run in
+
+parallel but that reduces w and
+
+increases l by the same factor
+
+uh which cancels out so w is really the
+
+latency of handling a transaction
+
+as if all the work were done
+
+sequentially
+
+and because the system is stable the
+
+rate of request arrival is equal to the
+
+rate
+
+uh the requests are dispatched so lambda
+
+is our throughput in what we wish to
+
+maximize
+
+it turns out that if t is the average
+
+latency of a context switch
+
+and use the average latency a thread
+
+weights blocked for some i o
+
+or message and message passing scenario
+
+then the
+
+impact of context switch on throughput
+
+meaning if we reduce
+
+the cost of context switching from t to
+
+zero
+
+uh is just t over mu meaning if the
+
+average
+
+wait time is four microseconds which is
+
+about the fastest latency in i o device
+
+we have now can have
+
+then if the context switch is 200
+
+nanoseconds which is
+
+quite big then reducing the context
+
+switch from that to zero
+
+would buy us just a five percent
+
+improvement in throughput
+
+compared to 100 in the generator's case
+
+and you can find the details of this
+
+calculation in this blog post i'll share
+
+this slides later
+
+moreover we can't reduce it to zero um
+
+or even close to it even if we wanted it
+
+because now we're dealing with many
+
+processes uh
+
+so there aren't any particularly great
+
+compiler optimizations available
+
+because the cool site in the scheduler
+
+is mega morphic
+
+and they can't all fit in the cache so
+
+the most efficient context switch in the
+
+world
+
+even just changing a register will take
+
+us 60 nanoseconds as we'll have at least
+
+one catchment
+
+so the best we could possibly hope for
+
+was 60 nanoseconds
+
+and improving in the context which from
+
+say 200 nanoseconds
+
+to optimal performance would get us
+
+maybe three
+
+three and a half percent improvement in
+
+throughput and that is in the best case
+
+where our i o
+
+is super fast so the performance
+
+benefits of user mode threads then
+
+come primarily from their number the l
+
+in little's law
+
+that is why their footprint is actually
+
+more important much more important than
+
+the context switching cost
+
+so even if we're using a language where
+
+resizable stacks do have a
+
+non-negligible impact to content
+
+switching
+
+it might not be worth it to give up and
+
+use emote threads
+
+and given that this is both a more
+
+common and arguably more useful use case
+
+if you decide to pick just one
+
+concurrency construct optimizing it for
+
+generators at the expense of transaction
+
+processing and economics seems like a
+
+questionable
+
+choice to me anyway in java we have full
+
+control over the back
+
+end we very rarely block inside ffi
+
+calls
+
+uh we don't have pointers into the stack
+
+allocating memory is transparent and
+
+efficient
+
+uh our most before uh pressing
+
+performance concern isn't
+
+currently generators and threads already
+
+exist
+
+so for us the choice is clear like
+
+erlang ago but
+
+unlike javascript kotlin and c plus
+
+muscle rust
+
+we've chosen user mode threads uh by the
+
+way the only language his choice i can't
+
+explain is c
+
+sharp which is ironic given that it's
+
+the first language i have a simple way
+
+so once we've decided user mode threads
+
+is what we want
+
+there was still a question of how to
+
+expose them to java developers
+
+as the same construct as today's threads
+
+or as something new
+
+now i said in the beginning when
+
+introducing new features
+
+we love forwards compatibility but a new
+
+feature that we believe will be
+
+attractive
+
+is also an opportunity to start fresh
+
+free from some baggage
+
+and java's thread api has certainly
+
+accumulated a lot of baggage over the
+
+past 25 years
+
+looked at code bases to see how the
+
+thread api is used
+
+and learned that some parts of it are so
+
+pervasive that
+
+if our user mode threads didn't support
+
+them and with identical semantics
+
+then very little existing code would
+
+work but other parts
+
+have been discouraged for so long and
+
+wrapped anyway by uh
+
+task submission and future constructs
+
+that the data nurse is invisible to most
+
+people
+
+um then there was also the matter of
+
+what to name them
+
+in the first phrase type we had a
+
+separate construct for user mode threads
+
+which we called fibers
+
+but that turned out to be a stumbling
+
+block for everyone uh in talks i found
+
+myself having to explain over and over
+
+that fibers are just like threads
+
+and people who'd heard of fibers have
+
+also heard that they're bad from some
+
+microsoft's paper
+
+that talked about a completely different
+
+kind of fibers uh implemented in the os
+
+so it was too overloaded and polluted we
+
+considered lightweight threads
+
+but were afraid of uh relative
+
+adjectives and some new construct that
+
+in ten years we'd need to call
+
+ultralight threads or something
+
+so we ended up with virtual threads uh
+
+the name virtual is supposed to evoke
+
+in association with virtual memory some
+
+plentiful
+
+abstract resource that is automatically
+
+and cleverly mapped
+
+to a more limited uh physical resource
+
+and after experimentation we ultimately
+
+decided that the same thread class
+
+would become a proper abstraction and
+
+represent both user mode threads
+
+and os frames uh so virtual friends
+
+analyst friends
+
+uh much of the work implementing virtual
+
+friends in open jdk was actually getting
+
+the tooling interfaces
+
+to work in a way that will let even
+
+existing clients see virtual friends
+
+just as they see java friends today
+
+however the mere number of virtual
+
+friends also makes them
+
+a different beast even if a debugger
+
+even if a debugger or a profile a could
+
+display a list of a million friends
+
+it's doubtful it would be helpful uh
+
+we're
+
+still thinking about this problem
+
+together with tool vendors
+
+but we have an idea i'll mention later
+
+to implement virtual threads in the jdk
+
+we split them into two concerns
+
+a delimited continuation which is a
+
+process that can suspend itself
+
+and the next time you run it it resumes
+
+its execution from the suspension point
+
+and and a scheduler which assigns
+
+continuations to cpu calls
+
+where the jdk bottoms out and the
+
+operation of blocking a thread
+
+is this class called lock support and
+
+these methods parking on park
+
+we've added a dynamic branch that tests
+
+if the current
+
+thread is virtual or not um
+
+if it is sorry if it's not we go to the
+
+os
+
+if it is then we suspend the virtual
+
+threads continuation
+
+which means that the stack is logically
+
+enrolled back to the scheduler's code
+
+which can then schedule another virtual
+
+thread when we unblock a thread
+
+we similarly either do a cisco or
+
+make the thread runnable by submitting
+
+its continuation
+
+to the threads scheduler which will then
+
+decide
+
+when to execute it when it comes to io
+
+when you do a blocking operation we
+
+dynamically check if you're in the
+
+virtual thread or not
+
+and if so we emit a non-blocking i
+
+operation to the os and park the thread
+
+and then when some polar thread uh
+
+polaroid detects that the operation has
+
+completed
+
+it unparks the thread we've changed
+
+all implementations of io and
+
+synchronization constructs in the jdk to
+
+do
+
+just that uh which
+
+uh was like jacking up a house replacing
+
+its foundations and then gently laying
+
+it back down with everything still in
+
+place
+
+uh we haven't changed the language at
+
+all and the only interesting api changes
+
+are a new constructor of sorts for the
+
+thread class and a query method that
+
+tells uh that tells you if a thread is
+
+virtual
+
+so this project is approximately
+
+approximately 100 000 lines of code
+
+almost half of them on tests but it ends
+
+up just adding two methods to the core
+
+apis
+
+and i'm only lying a little when i say
+
+that
+
+continuations are implemented in the vm
+
+while the schedulers are implemented in
+
+java
+
+of course we don't have direct access to
+
+cpu calls so we
+
+approximate that by scheduling the
+
+continuations to os
+
+threads the schedulers aren't
+
+only written in java but it can be
+
+provided by the user
+
+and today's existing task schedulers can
+
+be used because the schedulers don't
+
+even need to be aware
+
+that they're scheduling continuations
+
+from their perspective
+
+they're ordinary opaque tasks it's just
+
+that if your continuation suspends
+
+its appearances scheduler as if the task
+
+is terminated
+
+and when it's resubmitted it will
+
+continue
+
+when the scheduler executes it again
+
+by default uh virtual threads use a word
+
+sealant scheduler
+
+but each one can be configured to use
+
+any new or existing job scheduler
+
+that implements the widely used
+
+executive interfaces
+
+interface this is how uh schedules and
+
+java are written today
+
+the task is submitted to the executor is
+
+actually the virtual threats
+
+continuation
+
+but with something extra that carries
+
+and set up uh it carries and sets up
+
+a thread identity when the continuation
+
+is resumed so the threaded identity
+
+is always the same uh virtual threads
+
+are preemptive
+
+which means that jdk is allowed to
+
+preempt as any call to the standard
+
+library
+
+but the default scheduler does not
+
+currently employ
+
+time slice base preemption but we do
+
+support the capability and mail out
+
+custom change lists to use it
+
+the reason is that this is far less
+
+useful than people think
+
+um if only a small number of spreads are
+
+cpu bound then they could just employ
+
+the kernel schedule
+
+right they can choose to use platforms
+
+rather than virtual strains
+
+if many threads can occasionally become
+
+cpu bound
+
+then work stealing will smooth that over
+
+and if many threads are frequently cpu
+
+bound then time slicing can't help
+
+anyway you're over surprised subscribed
+
+uh but if someone shows me a common real
+
+world scenario where time slicing might
+
+help i will consider adding it to the
+
+other four scheduler
+
+we've decided not to directly expose
+
+continuations to users
+
+at first uh number one we want them to
+
+get used to virtual threats first
+
+i number two i think most of the
+
+practical benefits of continuations are
+
+served by virtual threads anyway
+
+and number three both program logic
+
+and compiler optimizations like hoisting
+
+the current thread intrinsic
+
+out of loops rely on thread identity
+
+being stable
+
+inside a given method but in the future
+
+we might expose thread confinement
+
+continuations to use for things like
+
+generators
+
+and together with plugable schedulers
+
+we'll have the full range covered
+
+before we move on to our final topic
+
+continuations i want to spend a couple
+
+of minutes on structured concurrency
+
+with millions of threads uh there should
+
+be some way to organize them
+
+structured concurrency is a simple idea
+
+when execution splits to parallel parts
+
+they should rejoin at the end of the
+
+code block
+
+you can think of it as an extension of
+
+structured programming to concurrency
+
+the flow of the program is mirrored in
+
+the structure of the code
+
+or you can think of it as the bracket in
+
+some process calculus
+
+it's an old idea uh but the name was
+
+coined by martin sostrick
+
+and the concept was popularized in two
+
+blog posts by
+
+nathaniel smith and from there spread
+
+like wildfire
+
+now i have to say that uh rarely in my
+
+career have i read something by someone
+
+i didn't know and immediately thought
+
+this is obviously the right way to do it
+
+and this was one of those times
+
+um in java structured concurrency will
+
+look something like this
+
+so this particular executor the way it's
+
+configured would spawn a new virtual
+
+thread some new thread and configure to
+
+be virtual
+
+for every submitted task but the
+
+important thing
+
+is that this block cannot be exited
+
+as long as the child threads are still
+
+alive
+
+so we block and wait for them to
+
+terminate at the closing curly bracket
+
+of course uh we have combinators to get
+
+the results of say the first successful
+
+child thread
+
+all children friends will some arbitrary
+
+uh combination
+
+but structures concurrency helps with
+
+error propagation from the child's rates
+
+because
+
+there's always a parent watching a
+
+child thread always does some work on
+
+behalf of parents which is waiting for
+
+it
+
+it can help with assigning deadlines to
+
+any set of tasks
+
+without explicitly propagating deadline
+
+or cancellation tokens
+
+down even multiple call stacks
+
+and it also interacts nicely with
+
+another construct we're introducing
+
+which we call
+
+scope locals uh as an alternative to
+
+thread locals
+
+these are pretty much uh like lisps
+
+special variables
+
+dynamically scoped nesting immutable
+
+bindings
+
+um because the lifetime of the threat
+
+in this structured concurrency scope is
+
+confined to this block
+
+all those friends can safely inherit the
+
+surrounding
+
+scope local bindings because we know
+
+that by the time
+
+uh the the scope bindings are exited
+
+those threads can terminate
+
+now remember the problem i mentioned
+
+were the tools presenting the user with
+
+a list of million threads we believe
+
+that
+
+uh structured concurrency can be the
+
+answer to that as well
+
+at any point in time the live transform
+
+a tree hierarchy that expresses their
+
+logical relationship
+
+children to work and behalf of parents
+
+and this structure can be presented by
+
+tools in a useful way even if the
+
+threats are unnamed
+
+now finally onto continuations
+
+um i assume you know what most of these
+
+prophecies mean
+
+and if not i understand that oleg uh
+
+cassily will be speaking here uh
+
+speaking here this month
+
+uh but i'll just highlight a few things
+
+first
+
+uh the type of the basic continuation
+
+exposed by the vm is void
+
+uh this makes it easy to build
+
+continuations of any time on top of it
+
+in libraries
+
+but it it's also helpful because we want
+
+to support forceful
+
+forceful preemption of continuations
+
+from another threat to implement time
+
+slicing
+
+if the scheduler wants to even
+
+not at yield points second uh the
+
+continuations can be nested
+
+uh i like calling them scoped uh kisoli
+
+of calls and multiprompt
+
+um now this capability isn't currently
+
+used but if one day we have generators
+
+this will allow running them inside
+
+virtual threads
+
+so the generator could yield a value or
+
+uh suspending just itself or it could do
+
+some blocking i o operations suspending
+
+both itself
+
+and the enclosing virtual thread
+
+continuation
+
+uh they are non-re-entrants or one-shot
+
+uh but i'd like to make them cloneable
+
+which means making
+
+reentry continuations will be easy and
+
+also possibly serializable
+
+um this is quite cool uh this could
+
+potentially allow
+
+a running thread to perform a blocking i
+
+operation say query a database
+
+uh be suspended it'd be blocked be
+
+transferred to another machine closer to
+
+the data
+
+and have the operation complete and the
+
+thread resumed there assuming of course
+
+all the
+
+data in the stack is serializable
+
+now this is a simplified api uh you can
+
+create a continuation with a given scope
+
+or prompt
+
+uh run would either start it or resume
+
+it
+
+yield suspends all continuations up to
+
+the innermost enclosing one of the given
+
+scope
+
+um this is an example of the api
+
+although
+
+again it's not exposed to users this is
+
+just used internally in the jdk
+
+okay this one it begins it's done will
+
+turn false to after it terminates is
+
+done which
+
+return true and this is an example of
+
+nesting
+
+uh so we have different scopes uh c
+
+yields the b scope so when c yields
+
+are c and b are suspended but a
+
+keeps running
+
+we cannot yield if we have a native ffi
+
+frame on the configuration stack
+
+uh so that could happen if we do a down
+
+call from
+
+java to c and then back and an up call
+
+from c back to java and then we yield
+
+in that case we say that the
+
+continuation is pinned and by default we
+
+throw an exception
+
+but the virtual thread configuration
+
+overloads that behavior
+
+and instead parks the carrier kernel
+
+thread
+
+um so that uh thread semantics are
+
+always
+
+preserved no matter what uh this is a
+
+fuller picture of the api
+
+so uh we also provide a method to walk
+
+and examine the continuation stack
+
+even if it's unmounted meaning suspended
+
+for
+
+troubleshooting and observability and we
+
+also have
+
+a try preempt operation for forceful
+
+preemption
+
+now what happens is this we have
+
+user code running on some thread uh and
+
+then
+
+forget about visual threads for the
+
+moment now they don't exist we're just
+
+talking about
+
+ordinary friends and continuations uh
+
+that user code then enters a
+
+continuation
+
+by the way in this uh chart the stack
+
+goes down
+
+so it calls uh configuration run uh it
+
+then pushes
+
+the configuration body pushes a few user
+
+frames on the stack
+
+and then yields conceptually
+
+those frames are then transferred into
+
+the suspended continuation
+
+they disappear from the stack and run
+
+returns
+
+next time we call run those frames are
+
+transferred again logically
+
+from the configuration to the thread
+
+stack
+
+and then we resume the continuation by
+
+returning from yield
+
+the reason why i present it uh logically
+
+as if the frames move
+
+is because at least in java you can get
+
+you can observe your stack
+
+so this is what you'll see when you do a
+
+stack walk
+
+in any of those frames
+
+now how do we implement this um i have
+
+to say that
+
+99 of the challenge and cleverness now
+
+implementation has to do with the
+
+interaction with the gc
+
+because we want our continuations and
+
+their resizable stacks to be ordinary
+
+heap objects
+
+that aren't centrally tracked in any way
+
+and aren't gc routes
+
+now going over that requires getting
+
+into
+
+how generational and concurrent garbage
+
+reflectors work
+
+that's a separate 16 minute talk so i'll
+
+just
+
+focus on one aspect and simplify it
+
+greatly
+
+i will say this just copying bytes
+
+from the heap to the stack or vice versa
+
+especially when one side normally the
+
+stack
+
+is almost guaranteed to be in the cache
+
+is very fast
+
+in fact if we don't increase enough the
+
+number of cash misses uh
+
+copying can be virtually free now it's a
+
+bit funny
+
+because accepting this has been a
+
+psychological challenge for me and
+
+others on the team
+
+uh because we somehow tend to think of
+
+copying as expensive and it's hard to
+
+accept and in some situations
+
+it can be very cheap and even virtually
+
+free
+
+on the other hand finding pointers in
+
+the stack for gc
+
+can be very expensive by comparison and
+
+our implementation requires doing that
+
+only on rare slow parts
+
+and that was much of the work so when i
+
+say copying the next few slides i mean
+
+copying and potentially some more
+
+expensive work that needs to be done
+
+if only on slow pass so
+
+physically copying frames as in the
+
+logical conceptual
+
+uh um chart picture that i showed you
+
+um has some real advantages over just
+
+changing the stock point
+
+the stack pointer to the continuation
+
+stack
+
+we only ever run code on the ordinary os
+
+thread stack so we don't need changes in
+
+the compiler to stack banking code
+
+we don't need to change the
+
+representation of frames we don't need
+
+changes
+
+to code that switches back to the thread
+
+stack when we have an ffi call because
+
+f5 calls can't run on the heap
+
+uh they don't know where the stack ends
+
+and uh
+
+we only ever need to do heap allocations
+
+of the continuation stack
+
+when we suspend and naughty arbitrary
+
+calls right the site can only grow when
+
+we suspend
+
+the main disadvantage of physically
+
+doing what i showed
+
+in the conceptual model is that it
+
+requires copying the entire continuation
+
+stack
+
+every time a continuation is mounted and
+
+unmounted so
+
+not continued or uh suspended even if we
+
+mostly
+
+just loop and yield uh inside the angus
+
+frame
+
+in that case we're also wasting cap
+
+space on frames we're not going to use
+
+in this
+
+session of the continuation this session
+
+when the configuration is mounted
+
+so what we do instead is copy lazily so
+
+if this is the first run of the
+
+configuration
+
+we first copy the whole stack but
+
+remember this is the first run
+
+so we've just touched this whole thing
+
+in this session
+
+but then when we continue and mount the
+
+continuation again
+
+we only copy one or two frames and we
+
+patch the return address in the frame
+
+to form what we call a return barrier
+
+so if user code and c then returns to
+
+its caller b
+
+uh the return address actually points to
+
+code that stores
+
+they call a frame b and then
+
+if b calls d and d yields
+
+we only need to copy back this portion
+
+that is
+
+the very portion of the stack that we've
+
+touched anyway in the session
+
+so we don't add any more cash misses
+
+normally roughly um
+
+so lazy copying means that work we do
+
+and especially the cash misses is pretty
+
+much the same
+
+we'd have we'd have had without any
+
+copying tool
+
+which makes the implementation both
+
+relatively simple
+
+and quite performant one idea i have for
+
+the future
+
+is that because the gc automatically
+
+detects which continuations and even
+
+which portions of the stacks
+
+are hot and which are cold and we
+
+separate them into different objects
+
+called chunks
+
+uh it could compress cold frames to a
+
+more efficient representation
+
+uh as its efficient footprint wise
+
+as it ages those objects decompression
+
+will then
+
+only be done on rare slow parts when
+
+those frames are thought
+
+and i believe that with that i'm done
+
+and i'm happy to take your questions if
+
+you have any
+
+thanks so if you have a question please
+
+raise your hand
+
+i see a question from yep jonathan
+
+hey thanks a lot and also uh thanks ron
+
+for for the talk
+
+really interesting work um so i
+
+have a question that is regarding the
+
+continuation api that you have shown
+
+so at first you mentioned that you don't
+
+want to expose continuations to the user
+
+user does that mean that um this api
+
+won't be available
+
+uh to the user later it means that in
+
+the first preview release of loom
+
+uh it will not be a public api uh so in
+
+uh in the jdk we have strong
+
+encapsulation which means that you won't
+
+be able to get access to it
+
+unless you explicitly enable it in the
+
+command line you could say please allow
+
+me to access jdk internals
+
+and then you could hack into it it's not
+
+recommended but you can technically do
+
+it
+
+because right now i'm heavily using it
+
+it's a really nice api
+
+yes and the the other question i have
+
+is um can you certainly if you if you
+
+found
+
+if you found a good use case for
+
+continuations that's not
+
+addressed by virtual threads with custom
+
+schedulers
+
+please let us know yes well um
+
+a follow-up question is um
+
+do you have any timelines on loom and
+
+or tell call optimizations
+
+uh so tell core optimization will happen
+
+after this
+
+uh i here i believe we don't have a
+
+specific timeline but
+
+uh i feel like we're in the home stretch
+
+okay
+
+that's really great because you also
+
+mentioned the effect enders and in order
+
+to support effect enders
+
+you not only need your delimiter
+
+conditions but also tco otherwise
+
+sadly won't fly so this i hope you know
+
+months to a year but uh
+
+okay great then i yield to the other
+
+questions
+
+sam hi all right yeah thanks for the
+
+talk
+
+uh i think i have a number of questions
+
+but i'll i'll try and uh
+
+restrain myself and maybe we can chat
+
+later um
+
+so first one uh you mentioned the the
+
+structured concurrency
+
+abstractions um
+
+do you have any thoughts on fairness
+
+there because one thing i'd worry about
+
+is
+
+i don't know you might be building this
+
+big structure and i don't know
+
+i have one thread and then that spawns a
+
+million other threads underneath it
+
+and in my conceptual structure i might
+
+only want to give that the same
+
+amount of resource as another thread
+
+that doesn't deliberately spawn a
+
+million other threads underneath it
+
+is there a way of expressing that so ah
+
+so you're asking whether there's a way
+
+to express maybe our
+
+priorities using practical concurrency
+
+yes no uh but there could be
+
+so brand priorities is a very hard
+
+problem
+
+uh that normally i say normally os
+
+is either not done correctly or done
+
+very inefficiently so
+
+non-real-time os's uh don't do it
+
+correctly
+
+real-time os's do it correctly but you
+
+pay a great price
+
+i'm not aware of good um
+
+good implementation of uh priorities
+
+that is
+
+both correct and efficient so if you do
+
+want to implement
+
+um implement a schedule like that you'll
+
+have to do it by yourself would not
+
+will not recommend it it won't be a
+
+default scheduler
+
+but uh what you could try to do is just
+
+assign
+
+those different groups to different
+
+schedulers running on
+
+different um carriers rentals
+
+and ask the os to take care of uh
+
+of um priorities for you although i have
+
+to say the os won't do it correct
+
+so uh priorities priorities are hard
+
+okay um okay i'll ask i'll ask one more
+
+question
+
+at least uh the um
+
+you you kind of uh sketched out the the
+
+continuation api
+
+uh and you said uh oh we're restricted
+
+to the void type
+
+could you elaborate a bit more on what
+
+that means
+
+and how you and how you encode richer
+
+types i mean is it
+
+by void type you mean kind of basically
+
+the unit types that
+
+has one value one so uh so uh voice unit
+
+yes
+
+uh and uh what i mean by that is that
+
+continuations can often
+
+communicate the value from the you
+
+you can pass an argument to yield and
+
+that will be the return argument from
+
+run
+
+what i call writing yeah if it's uh
+
+there was a recess and shift and
+
+um and vice versa you can pass arguments
+
+to
+
+run and that would be what would uh what
+
+yield
+
+so on the face of it it would seem that
+
+if the only by the force
+
+so the basic construct here is just void
+
+because we might want to suspend you
+
+even
+
+at points where you're not actually you
+
+don't actually want to suspend
+
+but it's very easy to write any type on
+
+top of it
+
+by just wrapping it with remember java
+
+is
+
+java is a is um
+
+java is imperative language uh you can
+
+just add a
+
+field or a couple of fields to your
+
+configuration and
+
+uh and wrap the yield and run methods
+
+with uh types with methods and take
+
+arguments and return arguments
+
+and you just assign them to the people
+
+well it's it's just as efficient
+
+okay right right that sort of seems a
+
+bit ugly but what
+
+you do once in the library and you can
+
+hide it
+
+okay fine yeah that's great
+
+um ian
+
+hi thanks ah interesting talk especially
+
+the practicalities of why choose one
+
+scheme over another and what
+
+constraints you're working on in
+
+different languages um i had one
+
+question about
+
+communication between the threads you
+
+have this structured
+
+concurrency which allows results to flow
+
+through following the
+
+structure of branching um do you have
+
+any thoughts about
+
+how one might communicate uh either
+
+directly or shared memory between the
+
+threads within that
+
+right so uh what we provide now
+
+and and with function currency is just
+
+an elegant way to return a single value
+
+of course in java you know everything is
+
+shared memory
+
+at least in the java language um plus
+
+we uh you do have um you have blocking
+
+cues
+
+which you can use similarly to panels
+
+and go
+
+but we also wanted to have you know the
+
+full
+
+uh expressiveness of channels and go
+
+with selection
+
+um and we've asked doug lee to implement
+
+it for us
+
+and he is taking his time so uh that
+
+might be delivered
+
+separately uh so that's a so it's up to
+
+you now you can use
+
+anything you like uh but so shared
+
+memory works as before
+
+with the structured current currency you
+
+have values coming in and things start
+
+up and they can return result
+
+but if you want communication between it
+
+your model would be channels
+
+but that's still in progress yes and the
+
+java memory model
+
+uh in terms of memory visibility virtual
+
+friends is identical
+
+right that's what i was going to say so
+
+the virtual thread few of things is
+
+exactly as it was in
+
+from threads in that sense but there's a
+
+bit more structure in there
+
+okay um you mentioned about
+
+continuations and others on
+
+whether they might be exposed to the
+
+programmer um so one thing one might do
+
+with them
+
+is have uh uh handlers or restartable
+
+exceptions where when you
+
+capture an exception you get the limited
+
+currency but
+
+is that in any way compatible with the
+
+kind of continuations you're doing
+
+um yes absolutely but
+
+as you can see in that case having a
+
+spread confined
+
+is sufficient so um like i said we
+
+probably
+
+we can't expose the current continuation
+
+we have
+
+because then you might observe a thread
+
+identity that changes inside a single
+
+method
+
+that breaks from comparable functions
+
+but we will be able to expose
+
+a continuation that is played
+
+that is sufficient but the things you
+
+say
+
+uh is exactly the kind of thing that
+
+scares me
+
+that is why the number one reason for
+
+not exposing it
+
+is that we want people to first use the
+
+support
+
+do well behave things first no um so i
+
+guess in particular these
+
+continuations one shot or could that be
+
+replicated
+
+one shots but i want to make them so you
+
+will be able to implement
+
+reentering continuations or like proper
+
+re-entrance
+
+the limited continuation once they're
+
+done
+
+okay so the framework you've got is is
+
+looking towards that being possible uh
+
+which sounds great actually
+
+why did i yeah i'm giving the time to
+
+work
+
+okay no thanks very much oh yeah so you
+
+mentioned that though that
+
+thread ids uh are an issue in that uh
+
+does that turn up anywhere else i mean
+
+i've heard that
+
+although for the programmer the idea of
+
+a unique thread id is is really
+
+intuitive
+
+it's actually one of the hardest things
+
+to support because by the time they're
+
+executing a machine it's not so so
+
+natural to have a unique thread id
+
+um what do you mean by unique global
+
+unique
+
+uh well simply the fact that um
+
+inside inside a thread having a single
+
+idea of an id
+
+when in fact at runtime it could be in
+
+all kinds of places um
+
+yeah i think this is done yeah we have
+
+we have uh we have intrinsic for that
+
+and different
+
+and different um uh architectures it
+
+could be always stored in a single
+
+single register sometimes we spread
+
+local memory
+
+um that that is only our problem we just
+
+need to be careful
+
+when and that when you we use those
+
+um intuitions for virtual threads what
+
+the user sees
+
+always takes up the correct thread id
+
+so you'll never see any weird you'll
+
+never see the thread id change
+
+underneath
+
+as you would and say some other uh java
+
+platform languages icon
+
+you could observe that thread id
+
+actually change it you
+
+okay yeah you're able to do that work to
+
+maintain the kind of in some sense the
+
+illusion for the program of having
+
+definitely a thread that continues over
+
+time
+
+yeah thanks
+
+ray morris yeah uh so
+
+what do you think of the long-term
+
+implications for the java ecosystem in
+
+terms of
+
+uh how it's applied do you see any new
+
+areas of application
+
+arising for java as a result of uh the
+
+introduction of project loom
+
+um okay first of all morris i'm happy
+
+and surprised to see you here
+
+uh like uh i'm an edinburgh person
+
+i don't know that okay uh so um
+
+you haven't i i
+
+it could be that you know people use it
+
+for things uh
+
+like actors although structured
+
+concurrency might be
+
+even nicer you know early life actors
+
+you might see implementations
+
+uh very efficient plantations erlang on
+
+the java platform which
+
+will probably be much more efficient
+
+than filling them b
+
+um but uh i don't think that this is
+
+primarily targeted at use cases people
+
+already use java for but today
+
+might need uh asynchronous apis or so
+
+called reactive frameworks or they
+
+they're not scalable but here we're
+
+saying you use you know the simple
+
+programming style and you get debugger
+
+support you get profiles
+
+and just do it simply so i don't think
+
+it opens
+
+um in the immediate terms new avenues
+
+but it will make
+
+very common java workloads much easier
+
+to do correctly
+
+thank you
+
+thanks uh dimitri
+
+thank you it was an interesting talk so
+
+um your talk was mostly about the
+
+stackful
+
+for routines so as a systems folk and
+
+working with low latency systems uh
+
+we actually talk more about stackless uh
+
+so what what is your view on status
+
+quarantines and uh
+
+do you see the use cases in the
+
+production for them or
+
+yeah i believe i answer that in the talk
+
+uh i think uh it
+
+what what is it you want to optimize for
+
+if you want to optimize for
+
+generators the generator use case or
+
+stuff that is not
+
+um traditional concurrency then they're
+
+more helpful
+
+but if you want to optimize for uh
+
+writing servers
+
+then i think our stack full her routines
+
+use them as friends uh just an overall
+
+win
+
+because uh first even if so in language
+
+in java we can do the this uh resizing
+
+stacks very efficiently but even in
+
+languages like see where it's a bit less
+
+efficient
+
+the efficiency you lose doesn't matter
+
+all that much
+
+um it doesn't matter as much as the
+
+um as the ergonomics but again
+
+you're saying if you're talking about
+
+very low level stuff you know writing
+
+kernels
+
+uh then you're addressing a very
+
+uh specialized uh group of of users
+
+anyway
+
+so they might be able to put it's
+
+certainly easier
+
+in in low-level languages and in general
+
+to implement
+
+um stackless core routines uh so yes
+
+they do have some use cases
+
+uh certainly in very low level level
+
+languages
+
+yeah for the main thing the most
+
+appealing thing about sex quartets is
+
+uh there are implementations which can
+
+do contact switching
+
+like single digit nanosecond for example
+
+yeah but it's not important
+
+ currency it doesn't it doesn't
+
+gain you anything so i saw this demo by
+
+um
+
+uh the the guy from microsoft added it
+
+to uh c plus plus uh
+
+uh what's his name van lion
+
+who dan lyon no no no uh has a russian
+
+name
+
+yes so uh he had this great demo when he
+
+was actually
+
+uh he was having multiple car routines
+
+that exploit
+
+uh the cash misses so if you
+
+if you have a cash miss you you can
+
+schedule another co routine
+
+and sort of hide underneath the
+
+catchments that is terrific
+
+except that it only works if you number
+
+your currencies and the data size
+
+just so so it makes for i think it's an
+
+amazing
+
+pilot trick but it's i don't think it's
+
+something that can scale you know to
+
+the ordinary programmer now again the
+
+ordinary java program that's not
+
+necessarily the ordinary
+
+c or assembly or uh ec plus plus program
+
+right so you're targeting a different
+
+audience so what's what's right for c
+
+plus plus is not necessarily what's
+
+right for java
+
+i don't see java programmers benefiting
+
+from
+
+that um c paragraph
+
+so one example is a really low latency
+
+io for example one microsecond rdma
+
+network
+
+which is purely user level and uh the
+
+other example is probably something
+
+about
+
+uh persistent memories like x point
+
+which
+
+uh one axis can be 100 nanoseconds for
+
+example and
+
+you can issue many parallax just just
+
+but then you have to but then you have
+
+to be careful about your cache misses
+
+and you have to know
+
+the size of your frames and to make sure
+
+they fit in around
+
+in the cache because once they don't you
+
+lose anyway
+
+our copying um so this
+
+so so that these implementations will
+
+always win
+
+easily over our implementation when all
+
+the data fits in the cache
+
+because when all the data fits in the
+
+cache copying stuff is not
+
+is no longer free right you're doing
+
+some work rather than not doing it all
+
+but once your data does not fit in the
+
+cache copying
+
+into the cache and just doing a cache
+
+miss is about the same
+
+so all the cool stuff you're talking
+
+about is very useful
+
+if you can size your data to fit in
+
+and you know some systems programming
+
+some systems programmers can do that and
+
+they work hard to do that
+
+in that case it's very useful i i don't
+
+think this should be
+
+so if you can only have one construct
+
+um and you choose to address both
+
+concurrency and this kind of clever
+
+stuff
+
+with the same construct then i'm not
+
+sure that sure this is the right choice
+
+but you might want to consider having
+
+both
+
+you know for the very low level stuff
+
+use stat plus co routines
+
+and for you know true concurrency server
+
+i o etc
+
+that doesn't fit in the cache i use user
+
+username threads
+
