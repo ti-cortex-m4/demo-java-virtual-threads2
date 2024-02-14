@@ -3,9 +3,9 @@
 
 ## Introduction
 
-Java _virtual threads_ are lightweight threads designed to significantly increase throughput in concurrent applications. Previously existing Java threads were based on operating system (OS) threads that proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the OS and therefore the JVM cannot efficiently handle more than a few thousand threads.
+Java _virtual threads_ are lightweight threads designed to increase throughput in concurrent applications. Pre-existing Java threads were based on operating system (OS) threads that proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the OS and therefore the JVM cannot efficiently handle more than a few thousand threads.
 
-Currently, programmers can either use threads as the units of concurrency and write synchronous blocking code in the thread-per-request model. These applications are easy to develop, but they are not scalable, because the number of OS threads is limited. Or, they can use other concurrent models (futures, async/await, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while showing much better scalability, are much more difficult to write, debug, and understand.
+Currently, programmers can either use threads as the units of concurrency and write synchronous blocking code in the thread-per-request model. These applications are easy to develop, but they are not scalable because the number of OS threads is limited. Or, they can use other concurrent models (futures, async/await, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while showing much better scalability, are much more difficult to write, debug, and understand.
 
 New lightweight _virtual threads_ managed by the JVM, can be used alongside the existing heavyweight _platform threads_ managed by the OS. Programmers can create millions of virtual threads and get similar scalability using much simpler synchronous blocking code.
 
@@ -17,7 +17,7 @@ New lightweight _virtual threads_ managed by the JVM, can be used alongside the 
 
 ### Concurrency and parallelism
 
-Before telling what virtual threads are, we need to explain how they can increase the throughput of concurrent applications. It's worth starting by explaining what _concurrency_ is and how it differs from _parallelism_.
+Before telling what virtual threads are, we need to explain how they can increase the throughput of concurrent applications. It is worth starting by explaining what _concurrency_ is and how it differs from _parallelism_.
 
 Parallelism is a technique to accelerate a single task by splitting it into cooperating subtasks scheduled onto multiple computing resources. The main performance parameter in parallel applications is _latency_ (the time duration of task processing). An example of a parallel code is the Fork/Join framework.
 
@@ -26,28 +26,28 @@ Concurrency, in contrast, is a technique to schedule largely independent tasks t
 
 ### Little's Law
 
-In mathematical theory, [Little's Law](https://www.google.com/search?q=Little%27s+Law) is a theorem that describes the behavior of concurrent systems. A _system_ means some arbitrary boundary in which tasks (requests or customers) arrive, spend some time inside, and then exit. The theorem applies to a _stable_ system, where tasks enter and exit at the same rate (rather than accumulating in an unbounded queue). Also, tasks should not be interrupted and should not interfere with each other. All the variables in the theorem refer to long-term averages in an arbitrary time period inside which we do not care about probabilistic fluctuations.
+In mathematical theory, [Little's Law](https://www.google.com/search?q=Little%27s+Law) is a theorem that describes the behavior of concurrent systems. A _system_ means some arbitrary boundary in which tasks (requests or customers) arrive, spend some time inside, and then leave. The theorem applies to a _stable_ system, where tasks enter and leave at the same rate (rather than accumulating in an unbounded queue). Also, tasks should not be interrupted and not interfere with each other. All the variables in the theorem refer to long-term averages in an arbitrary period inside which we do not care about probabilistic fluctuations.
 
-The theorem states that the number _L_ of tasks being concurrently handled (_capacity_) in a such system is equal to the arrival rate _λ_ (_throughput_) multiplied by the time _W_ that a task spends in the system (_latency_):
+The theorem states that the number _L_ of tasks being concurrently handled (_capacity_) in such a system is equal to the arrival rate _λ_ (_throughput_) multiplied by the time _W_ that a task spends in the system (_latency_):
 
 L = λ*W, where:
 
-λ - long-term average throughput
+λ - long-term average throughput,
 
-L - capacity
+L - capacity,
 
-W - long-term average latency
+W - long-term average latency.
 
 Because Little's Law applies to any system with arbitrary boundaries it applies to any subsystem of this system. Importantly for a system to be stable, all of its subsystems must also be stable.
 
 
-### Servers are concurrent applications
+### Servers are concurrent systems
 
-Little's Law can be applied to the software servers as well. A server is a system that receives incoming requests, processes them, and sends outgoing responses. A server can be considered as a system that contains several subsystems: CPU, memory, disc, network, etc. In servers, we are mainly interested in increasing throughput:
+Little's Law can be applied to the software servers as well. A server is a system that receives incoming requests, processes them, and sends outgoing responses. A server can be considered as a system that contains several subsystems: CPU, memory, disc, network, etc. In servers, we are mainly interested in increasing throughput.
 
 λ = L/W
 
-In correctly designed servers, incoming requests do not interfere with each other and slow each other down slightly. Thus, the time it takes for each request to be processed W (latency) in the server depends on the inherent properties of it and can be considered constant. Therefore, if we want to increase the λ (throughput), we must increase its L (capacity).
+In correctly designed servers, incoming requests do not interfere with each other and slow each other down slightly. Thus, the latency of each request on the server depends on its inherent properties and can be considered constant. Therefore, if we want to increase the throughput, we must increase its capacity.
 
 Further, we will be interested in processing the request in the CPU subsystem, because in most servers CPU is the bottleneck. It is often observed that when a server fully utilizes its CPUs, it is left with a significant amount of memory and network connections.
 
@@ -56,27 +56,27 @@ Further, we will be interested in processing the request in the CPU subsystem, b
 
 ### Threads are a limited resource
 
-The execution time of a request depends on the nature of its task. The CPU-bound requests use CPU almost all of the time. The IO-bound requests are used by the CPU for a short time, and most of the time are spent waiting on IO-blocking operations.
+The execution time of a request depends on the nature of its task. The CPU-bound requests use the CPU almost all of the time. Increasing the number of the threads will not help in such cases: you need to increase the number and speed of CPU cores. The I/O-bound requests use the CPU for a short time, and most of the time waiting on I/O-blocking operations.
 
 N<sub>threads</sub>= λ*W = (L<sub>CPU</sub>/W<sub>CPU</sub>)*W = L<sub>CPU</sub>*(W/W<sub>CPU</sub>)=N<sub>cores</sub>*(W/W<sub>CPU</sub>)
 
-If the server is processing a CPU-bound task, the only way to increase performance is to increase the number of CPU cores. But this is a fairly rare case. In most cases, when executing a request, the server makes external requests and waits for responses for quite a long time. Simplified, if the server uses CPU 1/N of request execution time, then one CPU core can simultaneously process N requests.
+It is quite rare that requests to a server are CPU-bound. In most cases, when executing a request, the server makes requests to a database or a REST server and waits for responses for quite a long time. Simplified, if the server uses CPU 1/N of request execution time, then one CPU core can simultaneously process N requests.
 
-For example, the CPU has 24 cores, and the latency of the request is W=100 ms. If a request spends W<sub>CPU</sub>=10 ms, then to fully use the CPU system it’s necessary to have 240 threads. If a request spends W<sub>CPU</sub>=0.1 ms, then to fully use the CPU system it’s necessary to have 24000 threads. However, the mainstream OS cannot support that number of active threads, mainly because their stack is too large. A consumer-grade computer now rarely supports more than 10000 threads.
+For example, a CPU has 24 cores, and the total latency of the request is W=100 ms. If a request spends W<sub>CPU</sub>=10 ms, then to fully use the CPU system it is necessary to have 240 threads. If a request spends W<sub>CPU</sub>=0.1 ms, then to fully use the CPU system it is necessary to have 24000 threads. However, the mainstream OS cannot support that number of active threads, mainly because their stack is too large. A consumer-grade computer nowadays rarely supports more than 10000 threads.
 
 
 ### Asynchronous programming is complicated
 
-Thus, if servers use the thread-per-request model, they will not utilize all the CPU resources. To utilize all the CPU resources completely under given conditions, it is necessary to abandon the _thread-per-request_ model. Typically instead an _asynchronous pipeline_ model is used, where different asynchronous stages are executed on worker threads from a thread pool.
+Thus, if servers use the thread-per-request model, they will not utilize all the computing resources. To utilize all the computing resources completely, it is necessary to abandon the thread-per-request model. Typically an asynchronous pipeline model is used instead, where asynchronous tasks are executed on different worker threads from a thread pool.
 
-But this solution also has serious problems. The entire Java platform is built around using threads as units of concurrency. In the Java programming language, statements are called sequentially in one thread, as well as loops, branches, and method calls. Programmers are forced to use completely different control flows in asynchronous programming. Exception has a stack trace that indicates where in a thread the error occurred. In asynchronous programming, stack traces are almost useless, because they contain the context of a different thread than the one in which they originated. Java tools (debuggers and profilers) have limited use in asynchronous code because they are also based on a thread as the execution context. Programmers lose all those advantages when they abandon the thread-per-request model in favor of the asynchronous code.
+But this solution also has serious problems. The entire Java platform is built around using threads as units of concurrency. In the Java programming language, statements (loops, branches, method calls, etc.) are called in one thread. Programmers are forced to use completely different control flows in asynchronous programming. Exception has a stack trace that indicates where in a thread the error occurred. In asynchronous programming, stack traces are almost useless, because they contain the context of a different thread than the one in which the error originated. Java tools (debuggers and profilers) have limited use in asynchronous code because they are also based on a thread as the execution context. Programmers lose all those advantages when they abandon the thread-per-request model in favor of the asynchronous code.
 
 
 ### User-mode threads are the solution
 
-Programmers were therefore facing a dilemma: waste money on hardware due to its under-utilization or waste money on development due to a programming style that is inappropriate with the design of the Java platform. The solution that the Loom Project team has chosen is to implement user-mode threads similar to those used in Erlang and Go. This solution provides a great level of concurrent capacity because this is what Little's Law requires to achieve high throughput.
+Programmers were therefore facing a dilemma: waste money on hardware due to its under-utilization or waste money on development due to a programming style that is inappropriate with the design of the Java platform. The solution that the Loom Project team has chosen is to implement user-mode threads similar to those used in Erlang and Go. This solution provides a exellent concurrent capacity because this is what Little's Law requires to achieve high throughput.
 
-These lightweight threads were named _virtual_ threads by analogy to _virtual_ memory. This name says that virtual threads are numerous and cheap thread-like entities that will utilize hardware well but will also be concordant with the Java platform. Virtual threads are implemented by the Java runtime (instead of the OS kernel) which manages their stack at a lower granularity than the OS can. So instead of a few thousand threads at the most, programmers can have millions of them in the same OS process. They allow programmers to write simple and performant concurrent code in the thread-per-request model, which is the only way that is harmonious with the design of the Java platform.
+These lightweight threads were named _virtual threads_ by analogy to _virtual memory_. This name says that virtual threads are numerous and cheap thread-like entities that will utilize hardware and will also be concordant with the Java platform. Virtual threads are implemented by the Java runtime (instead of the OS kernel) that manages their stack at a lower granularity than the OS can. So instead of a few thousand threads at the most, programmers can have millions of them in the same OS process. They allow programmers to write simple and performant concurrent code in the thread-per-request model, which is the only approach that is harmonious with the design of the Java platform.
 
 
 ## Platform threads and virtual threads
@@ -86,7 +86,7 @@ A thread is a _thread of execution_ in an application, that is an independently 
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS. The OS schedules OS threads and therefore, platform threads. The OS affects the thread creation time and the context switching time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. (For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory). So, the number of available platform threads is limited to the number of OS threads. A JVM on a consumer-grade computer can support up to ten thousand platform threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. The OS schedules OS threads and therefore, platform threads. The OS affects the thread creation time and the context switching time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. (For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory). So, the number of available platform threads is limited to the number of OS threads. A JVM on a consumer-grade computer can support up to ten thousand platform threads.
 
 >Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
@@ -148,7 +148,7 @@ The implementation of virtual threads consists of two parts: (delimited) continu
 
 Continuations are a sequential code that can suspend itself and later be resumed. When a continuation suspends, it saves its content and passes control outside. When a continuation is resumed, control returns to the last suspending point with the previous context.
 
-By default virtual threads use a work-stealing scheduler. Their scheduler is pluggable and instead can be used any other scheduler that implements the `Executor` interface. The schedulers do not even need to be aware that they are scheduling continuations. From their view, they are ordinary tasks that implement the `Runnable` interface. When a continuation suspends, it appears to the scheduler as if the task is terminated. When the continuation is resubmitted, it will continue when the scheduler executes it again.
+By default virtual threads use a work-stealing scheduler. This scheduler is pluggable, and any other scheduler that implements the `Executor` interface can be used instead. The schedulers do not even need to be aware that they are scheduling continuations. From their view, they are ordinary tasks that implement the `Runnable` interface. When a continuation is suspended, it appears to the scheduler as if the task is terminated. When the continuation is resubmitted, it will continue when the scheduler executes it again.
 
 The scheduler executes the tasks of virtual threads on a pool of a few platform threads used as _carrier threads_. By default, their initial number is equal to the number of available hardware threads, and their maximum number is 256.
 
@@ -169,16 +169,14 @@ When the I/O operation completes in the OS kernel, the scheduler performs the op
 * waits until a carrier thread is available;
 * _mounts_ the virtual thread to the carrier thread.
 
-To provide this behavior, most of the blocking operations in the Java standard library (mainly I/O and synchronization constructs from the _java.util.concurrent_ package) have been refactored. However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by limitations of the OS (which affects many file system operations) or of the JDK (such as with the `Object.wait()` method). The capture of an OS thread is compensated by temporarily adding a carrier thread to the scheduler.
+To provide this behavior, most of the blocking operations in the Java standard library (mainly I/O and synchronization constructs from the _java.util.concurrent_ package) have been refactored. However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by current limitations of the OS or of the JDK. The capture of an OS thread is compensated by temporarily adding a carrier thread to the scheduler.
 
 A virtual thread also cannot be unmounted during blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a _native method_, or a _foreign function_. During pinning, the scheduler does not create an additional carrier thread, so frequent and long-lived pinning may worsen the scalability.
 
 
 ## How to use virtual threads
 
-By implementing virtual streams, the Project Loom team sought to achieve maximum forward compatibility. That lets existing code take advantage of new features with little or no change. The Java language was not changed at all. Only a few methods have been added to the public Thread API. Numerous changes have been made to the implementation of the Java standard library (mainly I/O and synchronization constructs from the _java.util.concurrent_ package).
-
-The Project Loom team had a choice whether to make virtual threads a separate class in the hierarchy or inherit them from the `Thread` class. They chose the second option and now all existing concurrent code can, with some changes, use virtual threads. But as a result of the compromise, some implementation features that existed for platform threads (for example, thread pools and thread-local variables) are of little use. It is the programmer's responsibility to know and control these features described below.
+The Project Loom team had a choice whether to make virtual threads a separate class in the hierarchy or inherit them from the `Thread` class. They chose the second option and now all existing concurrent code can, with little or no change, use virtual threads. But as a result of the trade-off, some features that existed for platform threads (for example, thread pools and thread-local variables) are of little use for virtual threads. It is the programmer's responsibility to know and control these features described below.
 
 Virtual threads are instances of the nonpublic `VirtualThread` class, which is a subclass of the `Thread` class.
 
@@ -355,7 +353,7 @@ Sometimes, _scoped values_ may be a better alternative to thread-local variables
 
 ### Use synchronized blocks and methods carefully or switch to reentrant locks
 
-To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace a _synchronized_ block or method with a `ReentrantLock`, which also guarantees mutually exclusive access.
+To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace a _synchronized_ block or method with a `ReentrantLock`, that also guarantees mutually exclusive access.
 
 <sub>Running your application with <em>-Djdk.tracePinnedThreads=full</em> prints a complete stack trace when a thread blocks while pinned (highlighting native frames and frames holding monitors), running with <em>-Djdk.tracePinnedThreads=short</em> prints just the problematic stack frames.</sub>
 
@@ -366,6 +364,6 @@ To improve scalability using virtual threads, you should revise _synchronized_ b
 
 Virtual threads are designed for developing high-throughput concurrent applications when a programmer can create millions of units of concurrency with the well-known `Thread` class. Virtual threads are intended to replace platform threads in those applications that spend most of their time blocked on I/O operations.
 
-Implementing virtual threads while keeping platform threads to the same `Thread` class hierarchy is a compromise. All existing concurrent code can use virtual threads with minimal changes. It is the programmer's responsibility to use virtual threads correctly. This mainly concerns _thread pools_ and _thread-local variables_. Instead of thread pools, you need to create a virtual thread for each task. Thread-local variables should be used with caution and, if possible, refactored with_ scoped values_. Particular attention should be paid to the _structural concurrency_ that was implemented in the Project Loom along with virtual threads. This is a new technique to manage numerous virtual threads as a single unit of work.
+Implementing virtual threads while keeping platform threads to the same `Thread` class hierarchy is a compromise. All existing concurrent code can use virtual threads with minimal changes. It is the programmer's responsibility to use virtual threads correctly. This mainly concerns _thread pools_ and _thread-local variables_. Instead of thread pools, you need to create a virtual thread for each task. Thread-local variables should be used with caution and, if possible, replaced with _scoped values_. Particular attention should be paid to the _structural concurrency_ that was implemented in the Project Loom along with virtual threads. This is a new technique to manage numerous virtual threads as a single unit of work.
 
 Complete code examples are available in the [GitHub repository](https://github.com/aliakh/demo-java-virtual-threads).
