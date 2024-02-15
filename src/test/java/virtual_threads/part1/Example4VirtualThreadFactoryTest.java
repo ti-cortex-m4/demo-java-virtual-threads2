@@ -11,14 +11,14 @@ public class Example4VirtualThreadFactoryTest {
     @Test
     public void virtualThreadFactory() {
         Thread.Builder builder = Thread.ofVirtual()
-            .name("a virtual thread");
+            .name("virtual thread");
 
         ThreadFactory threadFactory = builder.factory();
         System.out.println(threadFactory.getClass().getName()); // java.lang.ThreadBuilders$VirtualThreadFactory
 
         Thread thread = threadFactory.newThread(() -> System.out.println("run"));
 
-        assertEquals("a virtual thread", thread.getName());
+        assertEquals("virtual thread", thread.getName());
         assertEquals(Thread.State.NEW, thread.getState());
     }
 }
