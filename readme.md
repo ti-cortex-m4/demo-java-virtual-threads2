@@ -224,7 +224,7 @@ The virtual _thread builder_ allows you to create a virtual thread with all avai
 Thread.Builder builder = Thread.ofVirtual()
    .name("virtual thread")
    .inheritInheritableThreadLocals(false)
-   .uncaughtExceptionHandler((t, e) -> System.out.printf("Thread %s failed with exception %s", t, e));
+   .uncaughtExceptionHandler((t, e) -> System.out.printf("thread %s failed with exception %s", t, e));
 
 Thread thread = builder.unstarted(() -> System.out.println("run"));
 
