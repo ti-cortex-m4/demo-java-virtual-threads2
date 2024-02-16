@@ -20,5 +20,6 @@ Id,Name,Shape Library,Page ID,Contained By,Group,Line Source,Line Destination,So
 19,Text,Standard,2,,,,,,,,W (latency),
 20,Text,Standard,2,,,,,,,,λ (throughput),
 21,SVGPathBlock2,,2,,,,,,,,,
-22,Line,,2,,,3,,None,Arrow,,,
-23,Line,,2,,,3,,Open Arrow,None,,,
+22,Text,Standard,2,,,,,,,,L = λW,
+23,Line,,2,,,3,,None,Arrow,,,
+24,Line,,2,,,3,,Open Arrow,None,,,
