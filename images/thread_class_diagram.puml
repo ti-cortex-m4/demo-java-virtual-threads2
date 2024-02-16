@@ -18,12 +18,12 @@ skinparam {
     RectangleFontStyle normal
 }
 
-rectangle "java.lang.Thread" as Thread
+rectangle "<i>public</i>\njava.lang.Thread" as Thread
 rectangle SubClass1
 rectangle SubClass2
 card "..." as SubClass3
 rectangle SubClassN
-rectangle "<i>sealed</i>\njava.lang.BaseVirtualThread" as BaseVirtualThread
+rectangle "<i>sealed abstract</i>\njava.lang.BaseVirtualThread" as BaseVirtualThread
 rectangle "<i>final</i>\njava.lang.VirtualThread" as VirtualThread
 
 Thread -down- SubClass1
