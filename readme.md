@@ -7,7 +7,7 @@ Java _virtual threads_ are lightweight threads designed to increase throughput i
 
 Currently, programmers can either use threads as the units of concurrency and write synchronous blocking code in the _thread-per-request_ model. These applications are easier to develop, but they are not scalable because the number of OS threads is limited. Or, programmers can use other concurrent models (futures, async/await, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while having much better scalability, are much more difficult to implement, debug, and understand.
 
-The virtual threads developed by Project Loom are supposed to solve the dilemma. New lightweight _virtual threads_ managed by the JVM, can be used alongside the existing heavyweight _platform threads_ managed by the OS. Programmers can create millions of virtual threads and achieve similar scalability using much simpler synchronous blocking code.
+Virtual threads developed inside Project Loom should solve this dilemma. New lightweight _virtual threads_ managed by the JVM, can be used alongside the existing heavyweight _platform threads_ managed by the OS. Programmers can create millions of virtual threads and achieve similar scalability using much simpler synchronous blocking code.
 
 <sup>All information in this article corresponds to OpenJDK 21.</sup>
 
@@ -58,12 +58,12 @@ For example, a CPU has 24 cores and the total request latency is W=100 ms. If a 
 
 Thus, if servers are designed on the thread-per-request model, they will under-utilize their computing resources.To fully utilize all computational resources, it is necessary to abandon the _thread-per-request_ model. Typically the _asynchronous pipeline_ model is used instead, where tasks at different stages are executed on different worker threads from a thread pool.
 
-But this solution also has serious problems. The entire Java platform is designed on using threads as units of concurrency. In the Java programming language, operators (branches, cycles, method calls) are called in a thread. Programmers are forced to use completely different control flows in various asynchronous frameworks. Exception has a stack trace that shows  where in a thread the error occurred. In asynchronous frameworks, stack traces are almost useless, because they contain the context of a different thread than the one in which the error occurred. The Java tools (debuggers and profilers) have limited use in asynchronous code, because they are also based on the thread as the execution context. Programmers lose all those advantages when they abandon the thread-per-request model in favor of an asynchronous model.
+But this solution also has serious problems. The entire Java platform is designed on using threads as units of concurrency. In the Java programming language, operators (branches, cycles, method calls) are called in a thread. Programmers are forced to use completely different control flows in various asynchronous frameworks. Exception has a stack trace that shows  where in a thread the error occurred. In asynchronous frameworks, stack traces are almost useless, because they contain the context of a different thread than the one in which the error occurred. The Java tools (debuggers, profilers) have limited use in asynchronous code, because they are also based on the thread as the execution context. Programmers lose all those advantages when they abandon the thread-per-request model in favor of an asynchronous model.
 
 
 ### User-mode threads are the solution
 
-Thus, programmers were faced with a dilemma: waste money on hardware due to its under-utilization or waste money on development due to a programming style that is disharmonious with the design of the Java platform. The solution that the Loom Project team has chosen is to implement user-mode threads similar to those used in Erlang and Go. This solution provides an excellent concurrent capacity because this is what Little's Law requires to achieve high throughput.
+Thus, programmers were faced with a dilemma: waste money on hardware due to its under-utilization or waste money on development due to a programming style that is disharmonious with the design of the Java platform. The solution that the Loom Project team has chosen is to implement user-mode threads (but not coroutines) similar to those used in Erlang and Go. This solution provides an excellent concurrent capacity because this is what Little's Law requires to achieve high throughput.
 
 These lightweight threads were named _virtual threads_ by analogy to _virtual memory_. This name suggests that virtual threads are numerous and cheap thread-like entities that make good use of computational resources. Virtual threads are implemented by the JVM (instead of the OS kernel), which manages their stack at a lower granularity than the OS can. So instead of a few thousand threads at most, programmers can have millions of threads in the single OS process. This allows programmers to write simple and scalable concurrent code in the thread-per-request model, which is the only approach that is harmonious with the Java platform.
 
@@ -75,18 +75,18 @@ A thread is a _thread of execution_, that is an independently scheduled executio
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. The OS schedules OS threads and therefore, platform threads. The OS affects the thread creation time and the context switching time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_. (For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory). So, the number of available platform threads is limited to the number of OS threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. The OS schedules OS threads and hence platform threads. The OS affects the thread creation time and the context switching time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_ with page granularity. (For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory). So, the number of available platform threads is limited to the number of OS threads.
 
 >Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
 
 ### Virtual threads
 
-_Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ OS threads. Virtual threads are scheduled by the JVM, rather than the OS. A virtual thread is a regular Java object, so the thread creation time and context switching time are negligible. The stack size of virtual threads is much smaller than for platform threads and is dynamically sized. When a virtual thread is inactive, its stack is stored in the JVM heap. Thus, the number of virtual threads does not depend on the limitations of the OS.
+_Virtual threads_ are _user-mode_ threads mapped many-to-many to _kernel-mode_ OS threads. Virtual threads are scheduled by the JVM, rather than the OS. A virtual thread is a regular Java object, so the thread creation time and context switching time are negligible. The stack of virtual threads is much smaller than for platform threads and is dynamically sized. When a virtual thread is inactive, its stack is stored in the JVM heap. Thus, the number of virtual threads does not depend on the limitations of the OS.
 
 >Virtual threads are suitable for executing tasks that spend most of the time blocked and are not intended for long-running CPU-intensive operations.
 
-Summary of quantitative differences between platform and virtual threads:
+A summary of the quantitative differences between platform and virtual streams:
 
 
 <table>
@@ -133,15 +133,13 @@ Summary of quantitative differences between platform and virtual threads:
 </table>
 
 
-The implementation of virtual threads consists of two parts: (delimited) continuations and a scheduler.
+The implementation of virtual threads consists of two parts: continuation and scheduler.
 
 Continuations are a sequential code that can suspend itself and later be resumed. When a continuation suspends, it saves its content and passes control outside. When a continuation is resumed, control returns to the last suspending point with the previous context.
 
-By default, virtual threads use a work-stealing scheduler. This scheduler is pluggable, and any other scheduler that implements the `Executor` interface can be used instead. The schedulers do not even need to be aware that they are scheduling continuations. From their view, they are ordinary tasks that implement the `Runnable` interface. When a continuation is suspended, it appears to the scheduler as if the task is terminated. When the continuation is resubmitted, it will continue from the last suspending point when the scheduler executes it again.
+By default, virtual threads use a work-stealing `ForkJoinPool` scheduler. This scheduler is pluggable, and any other scheduler that implements the `Executor` interface can be used instead. The schedulers do not even need to know that they are scheduling continuations. From their view, they are ordinary tasks that implement the `Runnable` interface. The scheduler executes virtual threads on a pool of several platform threads used as _carrier threads_. By default, their initial number is equal to the number of available _hardware threads_, and their maximum number is 256.
 
-The scheduler executes the tasks of virtual threads on a pool of a few platform threads used as _carrier threads_. By default, their initial number is equal to the number of available hardware threads, and their maximum number is 256.
-
-When a virtual thread calls, for example, a blocking I/O method, the scheduler performs the following actions:
+When a virtual thread calls a blocking I/O method, the scheduler performs the following actions:
 
 
 
@@ -158,9 +156,9 @@ When the I/O operation completes in the OS kernel, the scheduler performs the op
 * waits until a carrier thread is available;
 * _mounts_ the virtual thread to the carrier thread.
 
-To provide this behavior, most of the blocking operations in the Java standard library (mainly I/O and synchronization constructs from the _java.util.concurrent_ package) have been refactored. However, some operations do not yet support this feature and instead _capture_ the carrier thread. This behavior can be caused by current limitations of the OS or of the JDK. The capture of an OS thread is compensated by temporarily adding a carrier thread to the scheduler.
+To provide this behavior, most of the blocking operations in the Java standard library (mainly I/O and synchronization constructs from the _java.util.concurrent_ package) have been refactored. However, some operations do not yet support this feature and _capture_ the carrier thread instead. This behavior can be caused by current limitations of the OS or of the JDK. The capture of an OS thread is compensated by temporarily adding additional carrier thread to the scheduler.
 
-A virtual thread also cannot be unmounted during blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a _native method_, or a _foreign function_. During pinning, the scheduler does not create an additional carrier thread, so frequent and long-lived pinning may worsen the scalability.
+A virtual thread also cannot be unmounted during some blocking operations when it is _pinned_ to its carrier. This occurs when a virtual thread executes a _synchronized_ block/method, a _native method_, or a _foreign function_. During pinning, the scheduler does not create an additional carrier thread, so frequent and prolonged pinning may degrade scalability.
 
 
 ## How to use virtual threads
@@ -169,9 +167,9 @@ Virtual threads are instances of the nonpublic `VirtualThread` class, which is a
 
 ![thread class diagram](/images/thread_class_diagram.png)
 
-The `Thread` class has public constructors and the inner `Thread.Builder` interface for creating and starting both platform and virtual threads. For backward compatibility, all public constructors of the `Thread` class can create only platform threads. Virtual threads are instances of a class that does not have a public constructor, so the only way to create virtual threads is to use a builder. A similar builder exists for creating platform threads.
+The `Thread` class has public constructors and the inner `Thread.Builder` interface for creating and starting threads. For backward compatibility, all public constructors of the `Thread` class can create only platform threads for now. Virtual threads are instances of a class that does not have public constructors, so the only way to create virtual threads is to use a builder. A similar builder exists for creating platform threads.
 
-The `Thread` class has the following new methods to handle virtual threads:
+The `Thread` class has new methods to handle virtual threads:
 
 
 <table>
@@ -210,7 +208,7 @@ The `Thread` class has the following new methods to handle virtual threads:
 </table>
 
 
-There are four ways to create virtual threads:
+There are four ways to create and start virtual threads:
 
 
 
