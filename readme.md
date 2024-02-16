@@ -28,7 +28,7 @@ Concurrency, in contrast, is a technique to schedule largely independent tasks t
 
 In mathematical theory, [Little's Law](https://www.google.com/search?q=Little%27s+Law) is a theorem that describes the behavior of concurrent systems. A _system_ means some arbitrary boundary in which tasks (customers, transactions, or requests) arrive, spend time inside, and then leave. The theorem applies to a _stable_ system, where tasks enter and leave at the same rate (rather than accumulating in an unbounded queue). Also, tasks should not be interrupted and not interfere with each other. (All the variables in the theorem refer to long-term averages in an arbitrary time period, within which probabilistic fluctuations are irrelevant).
 
-![Little's Law](/images/Little_s_Law.svg)
+![Little's Law](/images/Little%27s_Law.svg)
 
 The theorem states that the number _L_ of tasks being concurrently handled (_capacity_) in such a system is equal to the arrival rate _λ_ (_throughput_) multiplied by the time _W_ that a task spends in the system (_latency_):
 
