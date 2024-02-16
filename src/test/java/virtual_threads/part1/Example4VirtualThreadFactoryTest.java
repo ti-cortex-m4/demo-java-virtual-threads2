@@ -13,10 +13,9 @@ public class Example4VirtualThreadFactoryTest {
         Thread.Builder builder = Thread.ofVirtual()
             .name("virtual thread");
 
-        ThreadFactory threadFactory = builder.factory();
-        System.out.println(threadFactory.getClass().getName()); // java.lang.ThreadBuilders$VirtualThreadFactory
-
-        Thread thread = threadFactory.newThread(() -> System.out.println("run"));
+        ThreadFactory factory = builder.factory();
+        System.out.println(factory.getClass().getName()); // java.lang.ThreadBuilders$VirtualThreadFactory
+        Thread thread = factory.newThread(() -> System.out.println("run"));
 
         assertEquals("virtual thread", thread.getName());
         assertEquals(Thread.State.NEW, thread.getState());
