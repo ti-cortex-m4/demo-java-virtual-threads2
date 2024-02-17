@@ -1,10 +1,11 @@
 # Introduction to Java virtual threads
 
+
 ## Introduction
 
 Java _virtual threads_ are lightweight threads designed to increase throughput in concurrent applications. Pre-existing Java threads were based on operating system (OS) threads that proved insufficient to meet the demands of modern concurrency. Applications such as web servers, databases, or message brokers nowadays must serve millions of concurrent requests, but the OS and therefore the JVM cannot efficiently handle more than a few thousand threads.
 
-Currently, programmers can either use threads as the units of concurrency and write synchronous blocking code in the _thread-per-request_ model. These applications are easier to develop, but they are not scalable because the number of OS threads is limited. Or, programmers can use other concurrent models (futures, async/await, coroutines, actors, etc.) that reuse threads without blocking them. Such solutions, while having much better scalability, are much more difficult to implement, debug, and understand.
+Currently, programmers can either use threads as the units of concurrency and write synchronous blocking code in the _thread-per-request_ model. These applications are easier to develop, but they are not scalable because the number of OS threads is limited. Or, programmers can use other concurrent models (futures, async/await, coroutines, actors) that reuse threads without blocking them. Such solutions, while having much better scalability, are much more difficult to implement, debug, and understand.
 
 Virtual threads developed inside Project Loom should solve this dilemma. New lightweight _virtual threads_ managed by the JVM, can be used alongside the existing heavyweight _platform threads_ managed by the OS. Programmers can create millions of virtual threads and achieve similar scalability using much simpler synchronous blocking code.
 
@@ -76,7 +77,7 @@ A thread is a _thread of execution_, that is an independently scheduled executio
 
 ### Platform threads
 
-_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. The OS schedules OS threads and hence platform threads. The OS affects the thread creation time and the context switching time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_ with page granularity. (For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory). So, the number of available platform threads is limited to the number of OS threads.
+_Platform threads_ are _kernel-mode_ threads mapped one-to-one to _kernel-mode_ OS threads. The OS schedules OS threads and hence, platform threads. The OS affects the thread creation time and the context switching time, as well as the number of platform threads. Platform threads usually have a large, fixed-size stack allocated in a process _stack segment_ with page granularity. (For the JVM running on Linux x64 the default stack size is 1 MB, so 1000 OS threads require 1 GB of stack memory). So, the number of available platform threads is limited to the number of OS threads.
 
 >Platform threads are suitable for executing all types of tasks, but their use in long-blocking operations is a waste of a limited resource.
 
@@ -218,7 +219,7 @@ There are four ways to create and start virtual threads:
 * the thread factory
 * the executor service
 
-The virtual _thread builder_ allows you to create a virtual thread with all available parameters: name, _inheritable-thread-local variables_ inheritance flag, uncaught exception handler, and `Runnable` task. (Note that the virtual threads are _daemon_ threads and have a fixed thread priority that cannot be changed).
+The virtual thread builder allows you to create a virtual thread with all available parameters: name, _inheritable-thread-local variables_ inheritance flag, uncaught exception handler, and `Runnable` task. (Note that the virtual threads are _daemon_ threads and have a fixed priority that cannot be changed).
 
 
 ```
@@ -238,7 +239,7 @@ assertEquals(5, thread.getPriority());
 
 <sub>In the platform thread builder, you can specify additional parameters: thread group, <em>daemon</em> flag, priority, and stack size. </sub>
 
-The _static factory method_ allows you to create a virtual thread with default parameters by specifying only a `Runnable` task. (Note that by default, the virtual thread name is empty).
+The static factory method allows you to create a virtual thread with default parameters, by specifying only a `Runnable` task. (Note that by default, the virtual thread name is empty).
 
 
 ```
@@ -250,16 +251,15 @@ assertEquals("", thread.getName());
 ```
 
 
-The _thread factory_ allows you to create virtual threads by specifying a `Runnable` task to the instance of the `ThreadFactory` interface. The parameters of virtual threads are specified by the current state of the thread builder from which this factory is created. (Note that the thread factory is thread-safe, but the thread builder is not).
+The thread factory allows you to create a virtual thread by specifying a `Runnable` task to the `ThreadFactory.newThread(Runnable)` method. The parameters of virtual threads are specified by the current state of the thread builder from which this thread factory is created. (Note that the thread factory is thread-safe, but the thread builder is not).
 
 
 ```
 Thread.Builder builder = Thread.ofVirtual()
    .name("virtual thread");
 
-ThreadFactory threadFactory = builder.factory();
-
-Thread thread = threadFactory.newThread(() -> System.out.println("run"));
+ThreadFactory factory = builder.factory();
+Thread thread = factory.newThread(() -> System.out.println("run"));
 
 assertTrue(thread.isVirtual());
 assertEquals("virtual thread", thread.getName());
@@ -267,7 +267,7 @@ assertEquals(Thread.State.NEW, thread.getState());
 ```
 
 
-The _executor service_ allows you to execute `Runnable` and `Callable` tasks in the unbounded, thread-per-task instance of the _ExecutorService_ interface.
+The executor service allows you to execute `Runnable` and `Callable` tasks in the unbounded, thread-per-task instance of the `ExecutorService` interface.
 
 
 ```
@@ -283,21 +283,21 @@ try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor
 
 ## How to properly use virtual threads
 
-The Project Loom team had a choice whether to make virtual threads a separate class in the _strand_ hierarchy or inherit them from the `Thread` class. They have chosen the second option, and now existing concurrent code can, with little or no change, use virtual threads. But as a result of this compromise, some features are widely used for platform threads (for example, thread pools and thread-local variables) but useless for virtual threads. It is the programmer's responsibility to know and avoid known pitfalls.
+The Project Loom team had a choice about whether to make the virtual thread class a sibling class or a subclass of the existing `Thread` class. They have chosen the second option, and now existing code can use virtual threads with little or no changes. But as a result of this trade-off, some features that were widely used for platform threads are not useful for virtual threads. The responsibility for knowing and avoiding known pitfalls is now on the programmer.
 
 
 ### Do not use virtual threads for CPU-bound tasks
 
-The OS scheduler for platform threads is preemptive. The OS scheduler uses _time slices_ to periodically suspend and resume platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress even if none of them explicitly yields.
+The OS scheduler for platform threads is _preemptive_ (see "Modern Operating Systems", 4th edition by Andrew S. Tanenbaum and Herbert Bos, 2015). The OS scheduler uses _time slices_ to periodically suspend and resume platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress, even if none of them explicitly yields.
 
-Currently, virtual threads can be preempted only at any call to the Java standard library. Their specifications allow using time-slice preemption, but the default scheduler does not use this (because the Project Loom team has no reason to do that in the current implementation). So now a virtual thread can be suspended, only if it is blocked on an I/O or other supported operation. If you run a virtual thread with a CPU-bound task, this thread monopolizes the OS thread until the task is completed, and other virtual threads experience _starvation_.
+Nothing in the design of virtual threads prohibits the use of a _preemptive_ scheduler as well. But the default work-stealing virtual thread scheduler is _non-preemptive_ and _non-cooperative_ (because the Project Loom team currently has no technical reason to do so). So now a virtual thread can only be suspended if it is blocked on I/O or another supported operation from the Java standard library. If you start a virtual thread with a CPU-bound task, that thread monopolizes the OS thread until the task is completed and other virtual threads may experience _starvation_.
 
 
 ### Write blocking synchronous code in the thread-per-request style
 
-Blocking platform threads is costly because it wastes a limited resource. Various asynchronous frameworks use tasks as more fine-grained units of concurrency instead of threads. These frameworks reuse threads without blocking them and indeed achieve higher application scalability. The price for this is a significant increase in development complexity. Since much of the Java platform assumes that execution context is contained in a thread, all that context is lost once we decouple tasks from threads.
+Blocking platform threads is expensive because it wastes limited computing resources. Various asynchronous and frameworks use other more grained units of concurrency instead of threads. These frameworks reuse threads without blocking them and indeed achieve higher scalability. But the result of these trade-offs is a significant increase in development complexity. Asynchronous code is much more complex, non-interoperable across frameworks, and difficult to debug and profile.
 
-In contrast, blocking virtual threads is low-cost, and moreover, it is their main design feature. While the blocked virtual thread is waiting for the operation to complete, the carrier thread and the underlying OS thread are actually not blocked. This allows programmers to create simpler yet efficient concurrent code in the thread-per-task style.
+In contrast, virtual thread blocking is cheap because it is their main design feature. While a blocked virtual thread is waiting for an operation to complete, the carrier thread and underlying OS thread are not blocked (in most cases). This allows programmers to develop simpler yet efficient concurrent code in the thread-per-request model.
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#write-blocking-synchronous-code-in-the-thread-per-task-style)
 
