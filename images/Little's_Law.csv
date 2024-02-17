@@ -20,7 +20,7 @@ Id,Name,Shape Library,Page ID,Contained By,Group,Line Source,Line Destination,So
 19,Text,Standard,2,3,,,,,,,W (latency),
 20,Text,Standard,2,,,,,,,,λ (throughput),
 21,SVGPathBlock2,,2,3,,,,,,,,
-22,Text,Standard,2,,,,,,,,L = λW,
+22,Text,Standard,2,,,,,,,,L = λW (long-term averages),
 23,Text,Standard,2,,,,,,,,Little's Law,
 24,Text,Standard,2,,,,,,,,stable system,
 25,Line,,2,,,3,,None,Arrow,,,
