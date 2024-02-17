@@ -1,4 +1,5 @@
 # Introduction to Java virtual threads
+<img src="/images/Little%27s_Law.svg" alt="alt text" width="50%" height="50%">
 
 
 ## Introduction
