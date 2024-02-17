@@ -26,9 +26,9 @@ Concurrency, in contrast, is a technique to schedule largely independent tasks t
 
 ### Little's Law
 
-In mathematical theory, [Little's Law](https://www.google.com/search?q=Little%27s+Law) is a theorem that describes the behavior of concurrent systems. A _system_ means some arbitrary boundary in which tasks (customers, transactions, or requests) arrive, spend time inside, and then leave. The theorem applies to a _stable_ system, where tasks enter and leave at the same rate (rather than accumulating in an unbounded queue). Also, tasks should not be interrupted and not interfere with each other. (All the variables in the theorem refer to long-term averages in an arbitrary time period, within which probabilistic fluctuations are irrelevant).
+In mathematical theory, [Little's Law](https://www.google.com/search?q=Little%27s+Law) is a theorem that describes the behavior of concurrent systems. A _system_ means some arbitrary boundary in which tasks (customers, transactions, or requests) arrive, spend time inside, and then leave. The theorem applies to a _stable_ system, where tasks enter and leave at the same rate (rather than accumulating in an unbounded queue). Also, tasks should not be interrupted and not interfere with each other. (All the variables in the theorem refer to long-term averages in an arbitrary time period, within which probabilistic variations are irrelevant).
 
-<img src="/images/Little%27s_Law.svg" alt="Little's Law" width="75%" height="75%">
+<img src="/images/Little%27s_Law.svg" alt="Little's Law" width="60%" height="60%">
 
 The theorem states that the number _L_ of tasks being concurrently handled (_capacity_) in such a system is equal to the arrival rate _λ_ (_throughput_) multiplied by the time _W_ that a task spends in the system (_latency_):
 
@@ -293,7 +293,7 @@ The OS scheduler for platform threads is _preemptive_ (see "Modern Operating Sys
 Nothing in the design of virtual threads prohibits the use of a _preemptive_ scheduler as well. But the default work-stealing virtual thread scheduler is _non-preemptive_ and _non-cooperative_ (because the Project Loom team currently has no technical reason to do so). So now a virtual thread can only be suspended if it is blocked on I/O or another supported operation from the Java standard library. If you start a virtual thread with a CPU-bound task, that thread monopolizes the OS thread until the task is completed and other virtual threads may experience _starvation_.
 
 
-### Write blocking synchronous code in the thread-per-request style
+### Write blocking synchronous code in the thread-per-request model
 
 Blocking platform threads is expensive because it wastes limited computing resources. Various asynchronous and frameworks use other more grained units of concurrency instead of threads. These frameworks reuse threads without blocking them and indeed achieve higher scalability. But the result of these trade-offs is a significant increase in development complexity. Asynchronous code is much more complex, non-interoperable across frameworks, and difficult to debug and profile.
 
@@ -304,18 +304,18 @@ In contrast, virtual thread blocking is cheap because it is their main design fe
 
 ### Do not pool virtual threads
 
-Creating a platform thread is a rather time-consuming process because it requires the creation of an OS thread. Thread pool executors are designed to reduce this time by reusing threads between executing multiple tasks. They contain a pool of worker threads to which `Runnable` and `Callable` tasks are passed through a blocking queue.
+Creating a platform thread is a rather long process because it requires the creation of an OS thread. Thread pools were designed to reduce this time by reusing threads between the execution of multiple tasks. They contain a pool of worker threads to which `Runnable` and `Callable` tasks are submitted through a queue.
 
-Unlike creating platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a pool of virtual threads. If the application requires an `ExecutorService` instance, use a specially designed implementation for virtual threads, which is returned from the static factory method `Executors.newVirtualThreadPerTaskExecutor()`. This executor does not use a thread pool and creates a new virtual thread for each submitted task. In addition, this executor itself is lightweight, so you can create and close it at any desired code within the _try-with-resources_ block.
+Unlike creating platform threads, creating virtual threads is a fast process. Therefore, there is no need to create a virtual thread pool. You should create a new virtual thread for each task, even something as small as a network call. If the application requires an `ExecutorService` instance, you should use a specially designed implementation for virtual threads, which is returned from the static factory method `Executors.newVirtualThreadPerTaskExecutor()`. This executor does not use a thread pool and creates a new virtual thread for each submitted task. Also, this executor itself is lightweight, so you can create and close it at any code within the _try-with-resources_ block.
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#do-not-pool-virtual-threads)
 
 
 ### Use semaphores instead of fixed thread pools to limit concurrency
 
-The main purpose of thread pools is to reuse threads between executing multiple tasks. When a task is submitted to a thread pool, it is inserted into a queue. The task is retrieved from the queue by a worker thread for execution. An additional purpose of using thread pools with a _fixed number_ of worker threads can be to limit the concurrency of a particular operation. They can be used when an external resource cannot process more than a predefined number of concurrent requests.
+The main purpose of thread pools is to reuse threads between execution of multiple tasks. When a task is submitted to a thread pool, it is inserted into a queue. The task is retrieved from the queue by a worker thread for execution. An additional purpose of using thread pools with a _fixed number_ of worker threads may be to limit the concurrency of some operation. Such thread pools can be used when an external resource cannot process more than a predefined number of concurrent requests.
 
-However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, you should use a `Semaphore` with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on it.
+However, since there is no need to reuse virtual threads, there is no need to use any thread pools for them. Instead, you should use a `Semaphore` with the same number of permits to limit concurrency. Just as a thread pool contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/ThreadPoolExecutor.java#L454) of tasks, a semaphore contains a [queue](https://github.com/openjdk/jdk21/blob/master/src/java.base/share/classes/java/util/concurrent/locks/AbstractQueuedSynchronizer.java#L319) of threads blocked on its synchronizer.
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-semaphores-instead-of-fixed-thread-pools-to-limit-concurrency)
 
@@ -324,7 +324,7 @@ However, since there is no need to reuse virtual threads, there is no need to us
 
 To achieve better scalability of virtual threads, you should reconsider using _thread-local variables_ and _inheritable-thread-local variables_. Thread-local variables provide each thread with its own copy of a variable, and inheritable-thread-local variables additionally copy these variables from the parent thread to the child thread. Thread-local variables are typically used to cache mutable objects that are expensive to create. They are also used to implicitly pass thread-bound parameters and return values through a sequence of intermediate methods.
 
-Virtual threads support thread-local behavior (after much consideration by the Project Loom team) in the same way as platform threads. Because virtual threads can be very numerous, the following features of thread-local variables can have a more significant negative effect:
+Virtual threads support thread-local behavior (after much consideration by the Project Loom team) in the same way as platform threads. But since virtual threads can be much more numerous, the following features of thread-local variables can have a larger negative effect:
 
 
 
@@ -339,9 +339,9 @@ Sometimes, _scoped values_ may be a better alternative to thread-local variables
 
 ### Use synchronized blocks and methods carefully or switch to reentrant locks
 
-To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running pinning (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace a _synchronized_ block or method with a `ReentrantLock`, that also guarantees mutually exclusive access.
+To improve scalability using virtual threads, you should revise _synchronized_ blocks and methods to avoid frequent and long-running _pinning_ (such as I/O operations). Pinning is not a problem if such operations are short-lived (such as in-memory operations) or infrequent. Alternatively, you can replace a _synchronized_ block or method with a `ReentrantLock`, that also guarantees mutually exclusive access.
 
-<sub>Running your application with <em>-Djdk.tracePinnedThreads=full</em> prints a complete stack trace when a thread blocks while pinned (highlighting native frames and frames holding monitors), running with <em>-Djdk.tracePinnedThreads=short</em> prints just the problematic stack frames.</sub>
+<sub>Running an application with the <em>-Djdk.tracePinnedThreads=full</em> system property prints a complete stack trace when a thread blocks while pinned (highlighting native frames and frames holding monitors), running with the <em>-Djdk.tracePinnedThreads=short</em>  system property prints just the problematic stack frames.</sub>
 
 [code examples](https://github.com/aliakh/demo-java-virtual-threads/blob/main/src/test/java/virtual_threads/part2/readme.md#use-synchronized-blocks-and-methods-carefully-or-switch-to-reentrant-locks)
 
