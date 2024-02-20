@@ -28,7 +28,7 @@ Concurrency, in contrast, is a technique to schedule multiple concurrent tasks t
 
 In mathematical theory, [Little's Law](https://www.google.com/search?q=Little%27s+Law) is a theorem that describes the behavior of concurrent systems. A _system_ means some arbitrary boundary in which tasks (customers, transactions, or requests) arrive, spend time inside and then leave. The theorem applies to a _stable_ system, where tasks enter and leave at the same rate (rather than accumulating in an unbounded queue). Also, tasks should not be interrupted and not interfere with each other. (All the variables in the theorem refer to long-term averages in an arbitrary period, within which probabilistic variations are irrelevant).
 
-<img src="/images/Little%27s_Law.svg" alt="Little's Law" width="75%" height="75%"/>
+<img src="/images/Little%27s_Law.svg" alt="Little's Law" width="80%" height="80%"/>
 
 The theorem states that the number _L_ of tasks being concurrently handled (_capacity_) in such a system is equal to the arrival rate _λ_ (_throughput_) multiplied by the time _W_ that a task spends in the system (_latency_):
 
@@ -60,14 +60,14 @@ For example, a CPU has 24 cores and the total request latency is W=100 ms. If a 
 
 Thus, if servers are designed on the thread-per-request model, they will under-utilize their computing resources. To fully utilize all computational resources, it is necessary to abandon the _thread-per-request_ model. Typically, the _asynchronous pipeline_ model is used instead, where tasks at different stages are executed on different worker threads from a thread pool.
 
-But this solution also has serious problems. The entire Java platform is designed on using threads as units of concurrency. In the Java programming language, control flow (branches, cycles, try/catch/finally) is called in a thread. Programmers are forced to use completely different control flows in various asynchronous frameworks. Exception has a stack trace that shows where in a thread the error occurred. In asynchronous frameworks, stack traces are almost useless, because they contain the context of a different thread than the one in which the error occurred. The Java tools (debuggers, profilers) have limited use in asynchronous code because they are also based on the thread as the execution context. Programmers lose all those advantages when they abandon the thread-per-request model in favor of an asynchronous model.
+But this solution also has serious problems. The entire Java platform is designed on using threads as units of concurrency. In the Java programming language, control flow (branches, cycles, `try`/`catch`/`finally`) is called in a thread. Exception has a stack trace that shows where in a thread the error occurred. The Java tools (debuggers, profilers) use thread as the execution context. Programmers lose all those advantages when they abandon the thread-per-request model in favor of an asynchronous model.
 
 
 ### User-mode threads are the solution
 
-Thus, programmers were faced with a dilemma: waste money on hardware due to its under-utilization or waste money on development due to a programming style that is disharmonious with the design of the Java platform. The solution that the Loom Project team has chosen is to implement user-mode threads similar to those used in Go and Erlang. This solution provides an excellent concurrent capacity because this is what Little's Law requires to achieve high throughput.
+Thus, programmers were faced with a dilemma: waste money on hardware due to its under-utilization or waste money on development due to a programming style that is disharmonious with the design of the Java platform. The solution that the Loom Project team has chosen is to implement user-mode threads similar to those used in Go. This solution provides an excellent concurrent capacity because this is what Little's Law requires to achieve high throughput.
 
-These lightweight threads were named _virtual threads_ by analogy to _virtual memory_. This name suggests that virtual threads are numerous and cheap thread-like entities that make good use of computational resources. Virtual threads are implemented by the JVM (instead of the OS kernel), which manages their stack at a lower granularity than the OS can. So instead of a few thousand threads at most, programmers can have millions of threads in a single process. This allows programmers to write simple and scalable concurrent code in the thread-per-request model, which is the only approach that is harmonious with the Java platform.
+These lightweight threads were named _virtual threads_ by analogy to _virtual memory_. This name suggests that virtual threads are numerous and cheap thread-like entities that efficiently utilize computational resources. Virtual threads are implemented by the JVM (instead of the OS kernel), which manages their stack at a lower granularity than the OS can. So instead of a few thousand threads at best, programmers can have millions of threads in a single process. This allows programmers to write simple and scalable concurrent code in the thread-per-request model, which is the only approach that is harmonious with the Java platform.
 
 
 ## Platform threads and virtual threads
@@ -285,14 +285,14 @@ try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor
 
 ## How to properly use virtual threads
 
-The Project Loom team had a choice about whether to make the virtual thread class a sibling class or a subclass of the existing `Thread` class. They have chosen the second option, and now existing code can use virtual threads with little or no changes. However, as a result of this trade-off, some features that were widely used for platform threads are not useful for virtual threads. The responsibility for knowing and avoiding known pitfalls is now on the programmer.
+The Project Loom team had a choice about whether to make the virtual thread class a sibling class or a subclass of the existing `Thread` class. They have chosen the second option, and now existing code can use virtual threads with little or no changes. However, as a result of this trade-off, some features that were widely used for platform threads are useless or even harmful for virtual threads. The responsibility for knowing and avoiding known pitfalls is now on the programmer.
 
 
 ### Do not use virtual threads for CPU-bound tasks
 
 The OS scheduler for platform threads is _preemptive<sup>*</sup>_. The OS scheduler uses _time slices_ to periodically suspend and resume platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress, even if none of them explicitly yields.
 
-Nothing in the design of virtual threads prohibits the use of a _preemptive_ scheduler as well. However, the default work-stealing scheduler is _non-preemptive_ and _non-cooperative_ (because the Project Loom team did not have any real scenarios in which it could be useful). So now a virtual thread can only be suspended if it is blocked on I/O or another supported operation from the Java standard library. If you start a virtual thread with a CPU-bound task, that thread monopolizes the carrier thread until the task is completed and other virtual threads may experience _starvation_.
+Nothing in the design of virtual threads prohibits the use of a _preemptive_ scheduler as well. However, the default work-stealing scheduler is _non-preemptive_ and _non-cooperative_ (because the Project Loom team had not found any real scenarios in which it could be useful). So now virtual threads can only be suspended if they are blocked on I/O or another supported operation from the Java standard library. If you start a virtual thread with a CPU-bound task, that thread monopolizes the carrier thread until the task is completed, and other virtual threads may experience _starvation_.
 
 <sub>*see "Modern Operating Systems", 4th edition by Andrew S. Tanenbaum and Herbert Bos, 2015.</sub>
 
@@ -354,6 +354,6 @@ To improve scalability using virtual threads, you should revise _synchronized_ b
 
 Virtual threads are designed for developing high-throughput concurrent applications when a programmer can create millions of units of concurrency with the well-known `Thread` class. Virtual threads are intended to replace platform threads in those applications with I/O-intensive operations.
 
-Implementing virtual threads as a subclass of the existing `Thread` class was a trade-off. As an advantage, most of the existing concurrent code can use virtual threads with minimal changes. As a drawback, some Java concurrency APIs do not have much use for virtual threads. It is the programmer's responsibility to ensure that virtual threads are used correctly. This mainly concerns thread, thread-local variables, and `synchronized` blocks/methods. Instead of thread pools, you should create a new virtual thread for each task. You should use thread-local variables with caution and, if possible, replace them with scoped values. You should revisit `synchronized` to avoid _pinning_ in long and frequently used methods of your applications. Additionally, third-party libraries that you use in your applications must be refactored by their owners or patched to become compatible with virtual threads.
+Implementing virtual threads as a subclass of the existing `Thread` class was a trade-off. As an advantage, most of the existing concurrent code can use virtual threads with minimal changes. As a drawback, some Java concurrency APIs are useless or even harmful for virtual threads. It is the programmer's responsibility to ensure that virtual threads are used correctly. This mainly concerns thread pools, thread-local variables, and `synchronized` blocks/methods. Instead of thread pools, you should create a new virtual thread for each task. You should use thread-local variables with caution and, if possible, replace them with scoped values. You should revisit `synchronized` to avoid _pinning_ in long and frequently used methods of your applications. Additionally, third-party libraries that you use in your applications must be refactored by their owners or patched to become compatible with virtual threads.
 
 Complete code examples are available in the [GitHub repository](https://github.com/aliakh/demo-java-virtual-threads).
