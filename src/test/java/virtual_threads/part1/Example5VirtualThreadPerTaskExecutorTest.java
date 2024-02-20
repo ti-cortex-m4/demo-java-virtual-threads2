@@ -11,10 +11,10 @@ public class Example5VirtualThreadPerTaskExecutorTest {
 
     @Test
     public void virtualThreadPerTaskExecutorTest() throws InterruptedException, ExecutionException {
-        try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-            System.out.println(executorService.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            System.out.println(executor.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
 
-            Future<?> future = executorService.submit(() -> System.out.println("run"));
+            Future<?> future = executor.submit(() -> System.out.println("run"));
             future.get();
         }
     }
