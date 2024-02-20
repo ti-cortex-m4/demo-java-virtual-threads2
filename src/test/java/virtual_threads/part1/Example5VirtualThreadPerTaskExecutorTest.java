@@ -7,12 +7,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 public class Example5VirtualThreadPerTaskExecutorTest {
 
     @Test
     public void virtualThreadPerTaskExecutorTest() throws InterruptedException, ExecutionException {
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            System.out.println(executor.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
+            assertEquals("java.util.concurrent.ThreadPerTaskExecutor", executor.getClass().getName());
 
             Future<?> future = executor.submit(() -> System.out.println("run"));
             future.get();

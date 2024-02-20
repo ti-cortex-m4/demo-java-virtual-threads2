@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.concurrent.ThreadFactory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Example4VirtualThreadFactoryTest {
 
@@ -14,9 +15,11 @@ public class Example4VirtualThreadFactoryTest {
             .name("virtual thread");
 
         ThreadFactory factory = builder.factory();
-        System.out.println(factory.getClass().getName()); // java.lang.ThreadBuilders$VirtualThreadFactory
+        assertEquals("java.lang.ThreadBuilders$VirtualThreadFactory", factory.getClass().getName());
         Thread thread = factory.newThread(() -> System.out.println("run"));
 
+        assertEquals("java.lang.VirtualThread", thread.getClass().getName());
+        assertTrue(thread.isVirtual());
         assertEquals("virtual thread", thread.getName());
         assertEquals(Thread.State.NEW, thread.getState());
     }

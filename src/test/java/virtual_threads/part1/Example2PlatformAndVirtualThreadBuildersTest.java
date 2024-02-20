@@ -21,6 +21,7 @@ public class Example2PlatformAndVirtualThreadBuildersTest {
 
         Thread thread = builder.unstarted(() -> System.out.println("run"));
 
+        assertEquals("java.lang.Thread", thread.getClass().getName());
         assertEquals("platform thread", thread.getName());
         assertFalse(thread.isDaemon());
         assertEquals(10, thread.getPriority());
@@ -32,10 +33,11 @@ public class Example2PlatformAndVirtualThreadBuildersTest {
             .name("virtual thread")
             .inheritInheritableThreadLocals(false)
             .uncaughtExceptionHandler((t, e) -> System.out.printf("thread %s failed with exception %s", t, e));
-        System.out.println(builder.getClass().getName()); // java.lang.ThreadBuilders$VirtualThreadBuilder
+        assertEquals("java.lang.ThreadBuilders$VirtualThreadBuilder", builder.getClass().getName());
 
         Thread thread = builder.unstarted(() -> System.out.println("run"));
 
+        assertEquals("java.lang.VirtualThread", thread.getClass().getName());
         assertEquals("virtual thread", thread.getName());
         assertTrue(thread.isDaemon());
         assertEquals(5, thread.getPriority());

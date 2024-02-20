@@ -14,8 +14,8 @@ public class Example1PlatformAndVirtualThreadsTest {
         thread.start();
         thread.join();
 
-        assertFalse(thread.isVirtual());
         assertEquals("java.lang.Thread", thread.getClass().getName());
+        assertFalse(thread.isVirtual());
     }
 
     @Test
@@ -23,8 +23,8 @@ public class Example1PlatformAndVirtualThreadsTest {
         Thread thread = Thread.ofPlatform().start(() -> System.out.println("run"));
         thread.join();
 
-        assertFalse(thread.isVirtual());
         assertEquals("java.lang.Thread", thread.getClass().getName());
+        assertFalse(thread.isVirtual());
     }
 
     @Test
@@ -32,8 +32,8 @@ public class Example1PlatformAndVirtualThreadsTest {
         Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
         thread.join();
 
-        assertTrue(thread.isVirtual());
         assertEquals("java.lang.VirtualThread", thread.getClass().getName());
+        assertTrue(thread.isVirtual());
         assertEquals("", thread.getName());
     }
 
@@ -42,8 +42,8 @@ public class Example1PlatformAndVirtualThreadsTest {
         Thread thread = Thread.ofVirtual().start(() -> System.out.println("run"));
         thread.join();
 
-        assertTrue(thread.isVirtual());
         assertEquals("java.lang.VirtualThread", thread.getClass().getName());
+        assertTrue(thread.isVirtual());
         assertEquals("", thread.getName());
     }
 }
