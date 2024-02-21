@@ -49,7 +49,7 @@ On most servers, requests execute I/O-bound tasks. These servers often have prob
 
 λ = L<sub>CPU</sub>/W<sub>CPU</sub> = N<sub>cores</sub>/W<sub>CPU</sub>
 
-Threads in such requests use the CPU for a short time, and spend most of the time waiting for blocking operations to complete. When a waiting thread is blocked, the scheduler can switch the CPU core to execute another thread. Simplified, if the server uses the CPU for only 1/N of the request execution time, then a single CPU core can process N requests simultaneously.
+Threads in such requests use the CPU for a short time and spend most of the time waiting for blocking operations to complete. When a waiting thread is blocked, the scheduler can switch the CPU core to execute another thread. Simplified, if the server uses the CPU for only 1/N of the request execution time, then a single CPU core can process N requests simultaneously.
 
 N<sub>threads</sub> = λ*W = (L<sub>CPU</sub>/W<sub>CPU</sub>)*W = L<sub>CPU</sub>*(W/W<sub>CPU</sub>) = N<sub>cores</sub>*(W/W<sub>CPU</sub>)
 
@@ -93,11 +93,11 @@ A summary of the quantitative differences between platform and virtual streams:
 
 <table>
   <tr>
-   <td>
+   <td>Parameter
    </td>
-   <td>platform threads
+   <td>Platform threads
    </td>
-   <td>virtual threads
+   <td>Virtual threads
    </td>
   </tr>
   <tr>
@@ -125,7 +125,7 @@ A summary of the quantitative differences between platform and virtual streams:
    </td>
   </tr>
   <tr>
-   <td>amount
+   <td>number
    </td>
    <td>&lt; 5000
    </td>
@@ -147,18 +147,18 @@ When a virtual thread calls a blocking I/O method, the scheduler performs the fo
 
 
 
-* _unmounts_ the virtual thread from the carrier thread;
-* suspends the continuation and saves its content;
-* start a non-blocking I/O operation in the OS kernel;
-* the scheduler can execute another virtual thread on the same carrier thread.
+* _unmounts_ the virtual thread from the carrier thread
+* suspends the continuation and saves its content
+* start a non-blocking I/O operation in the OS kernel
+* the scheduler can execute another virtual thread on the same carrier thread
 
 When the I/O operation completes in the OS kernel, the scheduler performs the opposite actions:
 
 
 
-* restores the content of the continuation and resumes it;
-* waits until a carrier thread is available;
-* _mounts_ the virtual thread to the carrier thread.
+* restores the content of the continuation and resumes it
+* waits until a carrier thread is available
+* _mounts_ the virtual thread to the carrier thread
 
 To provide this behavior, most of the blocking operations in the Java standard library (mainly I/O and synchronization constructs from the _java.util.concurrent_ package) have been refactored. However, some operations do not yet support this feature and _capture_ the carrier thread instead. This behavior can be caused by current limitations of the OS or of the JDK. The capture of an OS thread is compensated by temporarily adding a carrier thread to the scheduler.
 
@@ -229,10 +229,11 @@ Thread.Builder builder = Thread.ofVirtual()
    .name("virtual thread")
    .inheritInheritableThreadLocals(false)
    .uncaughtExceptionHandler((t, e) -> System.out.printf("thread %s failed with exception %s", t, e));
+assertEquals("java.lang.ThreadBuilders$VirtualThreadBuilder", builder.getClass().getName());
 
 Thread thread = builder.unstarted(() -> System.out.println("run"));
 
-assertTrue(thread.isVirtual());
+assertEquals("java.lang.VirtualThread", thread.getClass().getName());
 assertEquals("virtual thread", thread.getName());
 assertTrue(thread.isDaemon());
 assertEquals(5, thread.getPriority());
@@ -245,9 +246,10 @@ The static factory method allows you to create a virtual thread with default par
 
 
 ```
-Thread thread = Thread.startVirtualThread(() -> System.out.println("run"));
+Thread thread = Thread.ofVirtual().start(() -> System.out.println("run"));
 thread.join();
 
+assertEquals("java.lang.VirtualThread", thread.getClass().getName());
 assertTrue(thread.isVirtual());
 assertEquals("", thread.getName());
 ```
@@ -261,8 +263,10 @@ Thread.Builder builder = Thread.ofVirtual()
    .name("virtual thread");
 
 ThreadFactory factory = builder.factory();
+assertEquals("java.lang.ThreadBuilders$VirtualThreadFactory", factory.getClass().getName());
 Thread thread = factory.newThread(() -> System.out.println("run"));
 
+assertEquals("java.lang.VirtualThread", thread.getClass().getName());
 assertTrue(thread.isVirtual());
 assertEquals("virtual thread", thread.getName());
 assertEquals(Thread.State.NEW, thread.getState());
@@ -274,7 +278,7 @@ The executor service allows you to execute `Runnable` and `Callable` tasks in th
 
 ```
 try (ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor()) {
-   System.out.println(executorService.getClass().getName()); // java.util.concurrent.ThreadPerTaskExecutor
+   assertEquals("java.util.concurrent.ThreadPerTaskExecutor", executorService.getClass().getName());
 
    Future<?> future = executorService.submit(() -> System.out.println("run"));
    future.get();
@@ -290,9 +294,9 @@ The Project Loom team had a choice about whether to make the virtual thread clas
 
 ### Do not use virtual threads for CPU-bound tasks
 
-The OS scheduler for platform threads is _preemptive<sup>*</sup>_. The OS scheduler uses _time slices_ to periodically suspend and resume platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress, even if none of them explicitly yields.
+The OS scheduler for platform threads is _preemptive<sup>*</sup>_. The OS scheduler uses _time slices_ to suspend and resume platform threads. Thus, multiple platform threads executing CPU-bound tasks will eventually show progress, even if none of them explicitly yields.
 
-Nothing in the design of virtual threads prohibits the use of a _preemptive_ scheduler as well. However, the default work-stealing scheduler is _non-preemptive_ and _non-cooperative_ (because the Project Loom team had not found any real scenarios in which it could be useful). So now virtual threads can only be suspended if they are blocked on I/O or another supported operation from the Java standard library. If you start a virtual thread with a CPU-bound task, that thread monopolizes the carrier thread until the task is completed, and other virtual threads may experience _starvation_.
+Nothing in the design of virtual threads prohibits using a _preemptive_ scheduler as well. However, the default work-stealing scheduler is _non-preemptive_ and _non-cooperative_ (because the Project Loom team had not found any real scenarios in which it could be useful). So now virtual threads can only be suspended if they are blocked on I/O or another supported operation from the Java standard library. If you start a virtual thread with a CPU-bound task, that thread monopolizes the carrier thread until the task is completed, and other virtual threads may experience _starvation_.
 
 <sub>*see "Modern Operating Systems", 4th edition by Andrew S. Tanenbaum and Herbert Bos, 2015.</sub>
 
@@ -354,6 +358,6 @@ To improve scalability using virtual threads, you should revise _synchronized_ b
 
 Virtual threads are designed for developing high-throughput concurrent applications when a programmer can create millions of units of concurrency with the well-known `Thread` class. Virtual threads are intended to replace platform threads in those applications with I/O-intensive operations.
 
-Implementing virtual threads as a subclass of the existing `Thread` class was a trade-off. As an advantage, most of the existing concurrent code can use virtual threads with minimal changes. As a drawback, some Java concurrency APIs are useless or even harmful for virtual threads. It is the programmer's responsibility to ensure that virtual threads are used correctly. This mainly concerns thread pools, thread-local variables, and `synchronized` blocks/methods. Instead of thread pools, you should create a new virtual thread for each task. You should use thread-local variables with caution and, if possible, replace them with scoped values. You should revisit `synchronized` to avoid _pinning_ in long and frequently used methods of your applications. Additionally, third-party libraries that you use in your applications must be refactored by their owners or patched to become compatible with virtual threads.
+Implementing virtual threads as a subclass of the existing `Thread` class was a trade-off. As an advantage, most existing concurrent code can use virtual threads with minimal changes. As a drawback, some Java concurrency constructs are not beneficial for virtual threads. Now it is the responsibility of programmers to use virtual threads correctly. This mainly concerns thread pools, thread-local variables, and `synchronized` blocks/methods. Instead of thread pools, you should create a new virtual thread for each task. You should use thread-local variables with caution and, if possible, replace them with scoped values. You should revisit `synchronized` to avoid _pinning_ in long and frequently used methods of your applications. Finally, third-party libraries that you use in applications should be refactored by their owners or patched to become compatible with virtual threads.
 
 Complete code examples are available in the [GitHub repository](https://github.com/aliakh/demo-java-virtual-threads).
